@@ -41,7 +41,7 @@ local previous_aircraft_name
 
 function LuaExportStart()
 
-    default_output_file = io.open(lfs.writedir().."/Logs/Export.log", "w")
+    --default_output_file = io.open(lfs.writedir().."/Logs/Export.log", "w")
     if default_output_file then
         default_output_file:write("LuaExportStart: Export started.\n")
     end
@@ -101,18 +101,12 @@ function create_speedbrake_status_payload( aircraft_name )
     if (lMechInfo ~= nil) then
         local value = lMechInfo.speedbrakes.value
 
-        if default_output_file then
-            default_output_file:write(string.format("create_speedbrake_status_payload: lMechInfo.speedbrakes.value: %f\n", value))
-        end
-
+        // fudge factor for aircraft that do not use the full 0 to 1.0 range for speedbrake
         if (aircraft_name == "A-10C")   then value = value * 1.3; end
         if (aircraft_name == "A-10C_2") then value = value * 1.3; end
 
+        // ensure full range is used for aircraft that almost reach 1.0
         if (value >= 0.9) then value = 1.0 end
-
-        if default_output_file then
-            default_output_file:write(string.format("create_speedbrake_status_payload: value: %f\n", value))
-        end
 
         value = math.floor(value * 5)
 
@@ -134,7 +128,7 @@ end
 function LuaExportActivityNextEvent(t)
 
     if default_output_file then
---        default_output_file:write("LuaExportActivityNextEvent: enter\n")
+        --default_output_file:write("LuaExportActivityNextEvent: enter\n")
     end
 
     aircraft = LoGetSelfData()
