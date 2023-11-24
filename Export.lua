@@ -92,7 +92,7 @@ end
 
 local speedbrakes_value = nil
 
-function create_speedbrake_status_payload()
+function create_speedbrake_status_payload( aircraft_name )
 
     local updated = false
     local payload
@@ -101,12 +101,24 @@ function create_speedbrake_status_payload()
     if (lMechInfo ~= nil) then
         local value = lMechInfo.speedbrakes.value
 
+        if default_output_file then
+            default_output_file:write(string.format("create_speedbrake_status_payload: lMechInfo.speedbrakes.value: %f\n", value))
+        end
+
+        if (aircraft_name == "A-10C")   then value = value * 1.3; end
+        if (aircraft_name == "A-10C_2") then value = value * 1.3; end
+
         if (value >= 0.9) then value = 1.0 end
+
+        if default_output_file then
+            default_output_file:write(string.format("create_speedbrake_status_payload: value: %f\n", value))
+        end
+
         value = math.floor(value * 5)
 
         if (speedbrakes_value ~= value) then
             speedbrakes_value = value
-            
+
             payload = string.format("%d", value)
             updated = true;
         else
@@ -150,6 +162,20 @@ function LuaExportActivityNextEvent(t)
         local send_update = false
         local payload
 
+        if ( aircraft.Name == "A-10C" or
+             aircraft.Name == "A-10C_2" or
+             aircraft.Name == "FA-18C_hornet" or
+             aircraft.Name == "Su-25T" or
+             aircraft.Name == "Su-33" ) then
+
+            local speedbrake_status_payload
+            local updated = false
+
+            updated, speedbrake_status_payload = create_speedbrake_status_payload( aircraft.Name )
+            payload = speedbrake_status_payload
+            send_update = send_update or updated
+        end
+
         if (aircraft.Name == "F-16C_50") then
             local lamp_status_payload
             local speedbrake_status_payload
@@ -159,7 +185,7 @@ function LuaExportActivityNextEvent(t)
             payload = lamp_status_payload
             send_update = send_update or updated
 
-            updated, speedbrake_status_payload = create_speedbrake_status_payload()
+            updated, speedbrake_status_payload = create_speedbrake_status_payload( aircraft.Name )
             payload = payload..speedbrake_status_payload
             send_update = send_update or updated
         end
