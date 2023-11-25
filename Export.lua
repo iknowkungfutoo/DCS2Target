@@ -101,7 +101,7 @@ function create_speedbrake_status_payload( aircraft_name )
     if (lMechInfo ~= nil) then
         local value = lMechInfo.speedbrakes.value
 
-        // fudge factor for aircraft that do not use the full 0 to 1.0 range for speedbrake
+        -- fudge factor for aircraft that do not use the full 0 to 1.0 range for speedbrake
         if (aircraft_name == "A-10C")   then value = value * 1.3; end
         if (aircraft_name == "A-10C_2") then value = value * 1.3; end
 
