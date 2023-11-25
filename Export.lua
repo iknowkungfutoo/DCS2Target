@@ -105,7 +105,7 @@ function create_speedbrake_status_payload( aircraft_name )
         if (aircraft_name == "A-10C")   then value = value * 1.3; end
         if (aircraft_name == "A-10C_2") then value = value * 1.3; end
 
-        // ensure full range is used for aircraft that almost reach 1.0
+        -- ensure full range is used for aircraft that almost reach 1.0
         if (value >= 0.9) then value = 1.0 end
 
         value = math.floor(value * 5)
