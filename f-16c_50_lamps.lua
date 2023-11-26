@@ -5,11 +5,11 @@
 -- Use at own risk without warranty.
 --
 -- Utility functions for retrieving DCS F-16C_50 lamp states and packaging
--- for TCP packet transmission to Thrustmaster Target ViperTQSLEDSync.tmc
+-- for TCP packet transmission to Thrustmaster Target TMHotasLEDSync.tmc
 -- script.
 --
 -- Author: slughead
--- Date: 17/11/2023
+-- Date: 26/11/2023
 --
 ------------------------------------------------------------------------------
 

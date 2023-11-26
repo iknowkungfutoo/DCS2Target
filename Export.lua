@@ -1,35 +1,38 @@
 -------------------------------------------------------------------------------
 --
--- DCS export lua file for F-16C module and Thrustmaster Viper TQS LED control.
+-- DCS export lua file for Thrustmaster HOTAS devices.
 --
 -- Use at own risk without warranty.
 --
 -- The following lamps/indicators are exported:
 --
---   GEAR Nose
---   GEAR Left
---   GEAR Right
---   GEAR Warning (handle)
---   RWR AUX search
---   RWR AUX Activity
---   RWR AUX ActPower
---   RWR AUX Alt Low
---   RWR AUX Alt
---   RWR Power
+--   F-16:
+--      GEAR Nose
+--      GEAR Left
+--      GEAR Right
+--      GEAR Warning (handle)
+--      RWR AUX search
+--      RWR AUX Activity
+--      RWR AUX ActPower
+--      RWR AUX Alt Low
+--      RWR AUX Alt
+--      RWR Power
+--      Speed brake position
 --
--- To use, place in Saved Games\DCS.openbeta\Scripts or Saved Games\DCS\Scripts
--- folder.
+--  A-10C:
+--      Speed brake position
+--      Console light control level
 --
--- Supported for singleplayer missions.
--- Multiplayer is not supported and may or may not work. Multiplayer servers
--- may need the export of DCS parameters enabled.
+--
 --
 -- Author: slughead
--- Date: 17/11/2023
+-- Date: 26/11/2023
+--
+-- Version 1.0.3 - Added A-10C console light control
 --
 ------------------------------------------------------------------------------
 
-local default_output_file = nil
+default_output_file = nil
 local target_socket = nil
 
 local tm_target_utils
@@ -38,10 +41,17 @@ local aircraft_lamp_utils
 local aircraft
 local previous_aircraft_name
 
+local DCS2TARGET_VERSION = "DCS2TARGET v1.0.3"
+
+function create_version_payload()
+
+    return tm_target_utils.VERSION..DCS2TARGET_VERSION
+
+end
 
 function LuaExportStart()
 
-    --default_output_file = io.open(lfs.writedir().."/Logs/Export.log", "w")
+    default_output_file = io.open(lfs.writedir().."/Logs/Export.log", "w")
     if default_output_file then
         default_output_file:write("LuaExportStart: Export started.\n")
     end
@@ -59,6 +69,9 @@ function LuaExportStart()
     target_socket = socket.try(socket.connect(host, port))
     if target_socket then
         target_socket:setoption("tcp-nodelay", true)
+
+        local payload = create_version_payload()
+        socket.try(target_socket:send( tm_target_utils.pack_data(payload) ))
     end
 
 end
@@ -102,8 +115,8 @@ function create_speedbrake_status_payload( aircraft_name )
         local value = lMechInfo.speedbrakes.value
 
         -- fudge factor for aircraft that do not use the full 0 to 1.0 range for speedbrake
-        if (aircraft_name == "A-10C")   then value = value * 1.3; end
-        if (aircraft_name == "A-10C_2") then value = value * 1.3; end
+        --if (aircraft_name == "A-10C")   then value = value * 1.3; end
+        --if (aircraft_name == "A-10C_2") then value = value * 1.3; end
 
         -- ensure full range is used for aircraft that almost reach 1.0
         if (value >= 0.9) then value = 1.0 end
@@ -147,7 +160,9 @@ function LuaExportActivityNextEvent(t)
                 socket.try(target_socket:send( tm_target_utils.pack_data(payload) ))
             end
 
-            if (aircraft.Name == "F-16C_50") then
+            if (aircraft.Name == "A-10C" or aircraft.Name == "A-10C_2") then
+                aircraft_lamp_utils = require("a-10c_lamps")
+            elseif (aircraft.Name == "F-16C_50") then
                 aircraft_lamp_utils = require("f-16c_50_lamps")
             end
         end
@@ -156,9 +171,7 @@ function LuaExportActivityNextEvent(t)
         local send_update = false
         local payload
 
-        if ( aircraft.Name == "A-10C" or
-             aircraft.Name == "A-10C_2" or
-             aircraft.Name == "FA-18C_hornet" or
+        if ( aircraft.Name == "FA-18C_hornet" or
              aircraft.Name == "Su-25T" or
              aircraft.Name == "Su-33" ) then
 
@@ -167,7 +180,16 @@ function LuaExportActivityNextEvent(t)
 
             updated, speedbrake_status_payload = create_speedbrake_status_payload( aircraft.Name )
             payload = speedbrake_status_payload
-            send_update = send_update or updated
+            send_update = updated
+        end
+
+        if (aircraft.Name == "A-10C" or aircraft.Name == "A-10C_2") then
+            local lamp_status_payload
+            local updated = false
+
+            updated, lamp_status_payload = aircraft_lamp_utils:create_lamp_status_payload()
+            payload = lamp_status_payload
+            send_update = updated
         end
 
         if (aircraft.Name == "F-16C_50") then
