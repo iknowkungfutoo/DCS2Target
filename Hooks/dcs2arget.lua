@@ -23,13 +23,17 @@
 --      Speed brake position
 --      Console light control level
 --
+--  F/A-18C Hornet:
+--      Speed brake position
+--      Console light control level
 --
 --
 -- Author: slughead
--- Date: 28/11/2023
+-- Date: 2/12/2023
 --
+-- Version 1.0.5 - Added F/A-18C Hornet console light control.
 -- Version 1.0.4 - Converted from export.lua to "hooks" file.
--- Version 1.0.3 - Added A-10C console light control
+-- Version 1.0.3 - Added A-10C console light control.
 --
 ------------------------------------------------------------------------------
 
@@ -38,7 +42,7 @@ local generic_aircraft_utils
 
 local dcs2target = {}
 
-    dcs2target.VERSION = "DCS2TARGET v1.0.4"
+    dcs2target.VERSION = "DCS2TARGET v1.0.5"
 
     dcs2target.lastUpdateTime = DCS.getModelTime()
 
@@ -118,14 +122,15 @@ function dcs2target.onSimulationFrame()
                 dcs2target.aircraft_lamp_utils = require("a-10c_lamps")
             elseif (dcs2target.aircraft.Name == "F-16C_50") then
                 dcs2target.aircraft_lamp_utils = require("f-16c_50_lamps")
+            elseif (dcs2target.aircraft.Name == "FA-18C_hornet") then
+                dcs2target.aircraft_lamp_utils = require("fa-18c_hornet_lamps")
             end
         end
 
         local send_update = false
         local payload
 
-        if ( dcs2target.aircraft.Name == "FA-18C_hornet" or
-             dcs2target.aircraft.Name == "Su-25T" or
+        if ( dcs2target.aircraft.Name == "Su-25T" or
              dcs2target.aircraft.Name == "Su-33" ) then
 
             local speedbrake_status_payload
@@ -157,6 +162,15 @@ function dcs2target.onSimulationFrame()
             updated, speedbrake_status_payload = generic_aircraft_utils:create_speedbrake_status_payload( dcs2target.aircraft.Name )
             payload = payload..speedbrake_status_payload
             send_update = send_update or updated
+        end
+
+        if (dcs2target.aircraft.Name == "FA-18C_hornet") then
+            local lamp_status_payload
+            local updated = false
+
+            updated, lamp_status_payload = dcs2target.aircraft_lamp_utils:create_lamp_status_payload()
+            payload = lamp_status_payload
+            send_update = updated
         end
 
         if send_update then
