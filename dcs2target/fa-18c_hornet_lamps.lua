@@ -9,7 +9,7 @@
 -- TMHotasLEDSync.tmc script.
 --
 -- Author: slughead
--- Date: 2/12/2023
+-- Date: 03/12/2023
 --
 ------------------------------------------------------------------------------
 
@@ -17,6 +17,8 @@ local P = {}
 fa_18c_hornet_lamps = P
 
     P.CONSOLE_LIGHT_DIAL = 413
+    P.LEFT_GENERATOR_CONTROL_SWITCH = 402
+    P.RIGHT_GENERATOR_CONTROL_SWITCH = 403
 
     P.speedbrakes_value   = nil
     P.console_light_value = nil
@@ -33,7 +35,9 @@ local function get_console_light_value( current_value )
         -- get engine info
         local lEngInfo = Export.LoGetEngineInfo()
 
-        if (lEngInfo.RPM.left > 60) then
+        if ((lEngInfo.RPM.left  > 60 and device:get_argument_value(aircraft_lamp_utils.LEFT_GENERATOR_CONTROL_SWITCH)  == 1) or
+            (lEngInfo.RPM.right > 60 and device:get_argument_value(aircraft_lamp_utils.RIGHT_GENERATOR_CONTROL_SWITCH) == 1))
+        then
             value = device:get_argument_value(aircraft_lamp_utils.CONSOLE_LIGHT_DIAL)
             value = math.floor(value * 5)
         end
@@ -66,6 +70,11 @@ local function get_speedbrake_value( current_value )
     end
 
     return updated, value
+end
+
+function P.init( self )
+    self.speedbrakes_value   = nil
+    self.console_light_value = nil
 end
 
 function P.create_lamp_status_payload( self )

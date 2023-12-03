@@ -29,8 +29,10 @@
 --
 --
 -- Author: slughead
--- Date: 2/12/2023
+-- Date: 03/12/2023
 --
+-- Version 1.0.6 - Added logic for A-10C/A-10C2/F/A-18C left and right engine
+--                 logic for console illumination.
 -- Version 1.0.5 - Added F/A-18C Hornet console light control.
 -- Version 1.0.4 - Converted from export.lua to "hooks" file.
 -- Version 1.0.3 - Added A-10C console light control.
@@ -42,7 +44,7 @@ local generic_aircraft_utils
 
 local dcs2target = {}
 
-    dcs2target.VERSION = "DCS2TARGET v1.0.5"
+    dcs2target.VERSION = "DCS2TARGET v1.0.6"
 
     dcs2target.lastUpdateTime = DCS.getModelTime()
 
@@ -87,6 +89,8 @@ end
 function dcs2target.onSimulationStop()
     log.write('dcs2target', log.INFO, 'onSimulationStop')
 
+    dcs2target.aircraft_lamp_utils = nil
+
     if target_socket then
         socket.try(target_socket:send( tm_target_utils.pack_data(tm_target_utils.QUIT) ))
         target_socket:close()
@@ -124,6 +128,10 @@ function dcs2target.onSimulationFrame()
                 dcs2target.aircraft_lamp_utils = require("f-16c_50_lamps")
             elseif (dcs2target.aircraft.Name == "FA-18C_hornet") then
                 dcs2target.aircraft_lamp_utils = require("fa-18c_hornet_lamps")
+            end
+
+            if (dcs2target.aircraft_lamp_utils ~= nil) then
+                dcs2target.aircraft_lamp_utils.init()
             end
         end
 

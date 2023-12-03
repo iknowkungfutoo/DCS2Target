@@ -9,16 +9,18 @@
 -- script.
 --
 -- Author: slughead
--- Date: 28/11/2023
+-- Date: 03/12/2023
 --
 ------------------------------------------------------------------------------
 
 local P = {}
 a_10c_lamps = P
 
-    P.APU_RPM_GUAGE      = 13
-    P.APU_GEN_PWR_SWITCH = 241
-    P.CONSOLE_LIGHT_DIAL = 297
+    P.APU_RPM_GUAGE            = 13
+    P.APU_GEN_PWR_SWITCH       = 241
+    P.LEFT_AC_GENERATOR_POWER  = 244
+    P.RIGHT_AC_GENERATOR_POWER = 245
+    P.CONSOLE_LIGHT_DIAL       = 297
 
     P.speedbrakes_value   = nil
     P.console_light_value = nil
@@ -39,8 +41,10 @@ local function get_console_light_value( current_value )
         -- get engine info
         local lEngInfo = Export.LoGetEngineInfo()
 
-        if ((apu_rpm >= 0.7 and apu_gen_pwr_switch == 1) or (lEngInfo.RPM.left > 50)) then
-
+        if ((apu_rpm > 0.8 and apu_gen_pwr_switch == 1) or
+            (lEngInfo.RPM.left  > 50 and device:get_argument_value(aircraft_lamp_utils.LEFT_AC_GENERATOR_POWER)  == 1) or
+            (lEngInfo.RPM.right > 50 and device:get_argument_value(aircraft_lamp_utils.RIGHT_AC_GENERATOR_POWER) == 1) )
+        then
             value = device:get_argument_value(aircraft_lamp_utils.CONSOLE_LIGHT_DIAL)
             value = math.floor(value * 5)
         end
@@ -76,6 +80,11 @@ local function get_speedbrake_value( current_value )
     end
 
     return updated, value
+end
+
+function P.init( self )
+    self.speedbrakes_value   = nil
+    self.console_light_value = nil
 end
 
 function P.create_lamp_status_payload( self )
