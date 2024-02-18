@@ -27,10 +27,19 @@
 --      Speed brake position
 --      Console light control level
 --
+--  JF-17:
+--      GEAR Nose
+--      GEAR Left
+--      GEAR Right
+--      GEAR Warning (handle)
+--      GEAR Transit
+--      Master warning (on/off)
+--
 --
 -- Author: slughead
--- Date: 03/12/2023
+-- Last edit: 13/2/2024
 --
+-- Version 1.0.7 - Added JF-17 aircraft files for Viper TQS (Tigershark2005)
 -- Version 1.0.6 - Added logic for A-10C/A-10C2/F/A-18C left and right engine
 --                 logic for console illumination.
 -- Version 1.0.5 - Added F/A-18C Hornet console light control.
@@ -44,7 +53,7 @@ local generic_aircraft_utils
 
 local dcs2target = {}
 
-    dcs2target.VERSION = "DCS2TARGET v1.0.6"
+    dcs2target.VERSION = "DCS2TARGET v1.0.7"
 
     dcs2target.lastUpdateTime = DCS.getModelTime()
 
@@ -128,6 +137,8 @@ function dcs2target.onSimulationFrame()
                 dcs2target.aircraft_lamp_utils = require("f-16c_50_lamps")
             elseif (dcs2target.aircraft.Name == "FA-18C_hornet") then
                 dcs2target.aircraft_lamp_utils = require("fa-18c_hornet_lamps")
+            elseif (dcs2target.aircraft.Name == "JF-17") then
+                dcs2target.aircraft_lamp_utils = require("jf-17_lamps")
             end
 
             if (dcs2target.aircraft_lamp_utils ~= nil) then
@@ -173,6 +184,15 @@ function dcs2target.onSimulationFrame()
         end
 
         if (dcs2target.aircraft.Name == "FA-18C_hornet") then
+            local lamp_status_payload
+            local updated = false
+
+            updated, lamp_status_payload = dcs2target.aircraft_lamp_utils:create_lamp_status_payload()
+            payload = lamp_status_payload
+            send_update = updated
+        end
+
+        if (dcs2target.aircraft.Name == "JF-17") then
             local lamp_status_payload
             local updated = false
 
