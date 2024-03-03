@@ -9,7 +9,7 @@
 -- script.
 --
 -- Author: slughead
--- Date: 28/11/2023
+-- Last edit: 03/03/2024
 --
 ------------------------------------------------------------------------------
 
@@ -78,6 +78,9 @@ local function get_lamp_status( id, status )
     end
 
     return updated, value
+end
+
+function P.init( self )
 end
 
 function P.create_lamp_status_payload(self)

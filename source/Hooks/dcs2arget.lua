@@ -37,8 +37,9 @@
 --
 --
 -- Author: slughead
--- Last edit: 13/2/2024
+-- Last edit: 03/03/2024
 --
+-- Version 1.0.8 - Added missing init functions and corrected call to init to fix errors in dcs.log
 -- Version 1.0.7 - Added JF-17 aircraft files for Viper TQS (Tigershark2005)
 -- Version 1.0.6 - Added logic for A-10C/A-10C2/F/A-18C left and right engine
 --                 logic for console illumination.
@@ -71,6 +72,7 @@ function dcs2target.onSimulationStart()
     log.set_output('dcs2target', 'dcs2target', log.INFO, log.MESSAGE + log.TIME_UTC + log.LEVEL)
     log.write('dcs2target', log.INFO, dcs2target.VERSION)
     log.write('dcs2target', log.INFO, 'onSimulationStart')
+    log.write('dcs2target', log.INFO, 'lua version ' .. _VERSION)
 
     package.path  = package.path..";"..lfs.writedir().."Scripts\\dcs2target\\?.lua"
     package.path  = package.path..";"..lfs.currentdir().."\\LuaSocket\\?.lua"
@@ -142,7 +144,7 @@ function dcs2target.onSimulationFrame()
             end
 
             if (dcs2target.aircraft_lamp_utils ~= nil) then
-                dcs2target.aircraft_lamp_utils.init()
+                dcs2target.aircraft_lamp_utils:init()
             end
         end
 

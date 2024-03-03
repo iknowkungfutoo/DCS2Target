@@ -9,7 +9,7 @@
 -- script.
 --
 -- Author: Tigershark2005
--- Date: 6/2/2024
+-- Last edit: 03/03/2024
 --
 ------------------------------------------------------------------------------
 
@@ -48,12 +48,15 @@ local function get_lamp_status( id, status )
     return updated, value
 end
 
+function P.init( self )
+end
+
 function P.create_lamp_status_payload(self)
 
     local updated        = false
     local status_changed = false
     local payload
-    
+
     local device = Export.GetDevice("LIGHTS")
     if type(device) ~= "number" and device ~= nil then
         status_changed, self.gear_nose_status = get_lamp_status( self.GEAR_NOSE, self.gear_nose_status )

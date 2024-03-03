@@ -9,7 +9,7 @@
 -- TMHotasLEDSync.tmc script.
 --
 -- Author: slughead
--- Date: 28/11/2023
+-- Last edit: 03/03/2024
 --
 ------------------------------------------------------------------------------
 
@@ -17,6 +17,10 @@ local P = {}
 generic_aircraft_utils = P
 
     P.speedbrakes_value = nil
+
+function P.init( self )
+    self.speedbrakes_value   = nil
+end
 
 function P.create_speedbrake_status_payload( self, aircraft_name )
 
