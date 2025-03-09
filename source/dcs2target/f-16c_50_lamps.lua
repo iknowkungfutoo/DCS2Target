@@ -20,6 +20,16 @@
 -- create_caution_lamp(352, CautionLights.GEAR_RIGHT)
 -- create_caution_lamp(369, CautionLights.GEAR_WARNING)
 
+-- create_caution_lamp(446, CautionLights.JFS_RUN)
+-- create_caution_lamp(512, CautionLights.MAIN_GEN)
+-- create_caution_lamp(515, CautionLights.STBY_GEN)
+-- create_caution_lamp(518, CautionLights.FLCS_RLY)
+-- create_caution_lamp(524, CautionLights.HYDRAZN)
+-- create_caution_lamp(523, CautionLights.AIR)
+-- create_caution_lamp(526, CautionLights.EPU)
+
+
+
 -- rwr_Search           = create_rwr_lights(396, RWRLights.SEARCH)
 -- rwr_Activity         = create_rwr_lights(398, RWRLights.ACTIVITY)
 -- rwr_ActPower         = create_rwr_lights(423, RWRLights.ACT_POWER)
@@ -53,6 +63,12 @@ f_16c_50_lamps = P
     P.RWR_ALT       = 424
     P.RWR_POWER     = 402
 
+    P.JFS_RUN       = 446
+    P.MAIN_GEN      = 512
+    P.STBY_GEN      = 515
+    P.FLCS_RLY      = 518
+    P.EPU           = 526
+
     P.gear_nose_status     = nil
     P.gear_left_status     = nil
     P.gear_right_status    = nil
@@ -63,6 +79,12 @@ f_16c_50_lamps = P
     P.rwr_alt_low_status   = nil
     P.rwr_alt_status       = nil
     P.rwr_power_status     = nil
+
+    P.jfs_run_status       = nil
+    P.main_gen_status      = nil
+    P.stby_gen_status      = nil
+    P.flcs_rly_status      = nil
+    P.epu_status           = nil
 
 
 local function get_lamp_status( id, status )
@@ -121,7 +143,22 @@ function P.create_lamp_status_payload(self)
         status_changed, self.rwr_power_status = get_lamp_status( self.RWR_POWER, self.rwr_power_status )
         updated = updated or status_changed
 
-        payload = string.format( "%d%d%d%d%d%d%d%d%d%d",
+        status_changed, self.jfs_run_status = get_lamp_status( self.JFS_RUN, self.jfs_run_status )
+        updated = updated or status_changed
+
+        status_changed, self.main_gen_status = get_lamp_status( self.MAIN_GEN, self.main_gen_status )
+        updated = updated or status_changed
+
+        status_changed, self.stby_gen_status = get_lamp_status( self.STBY_GEN, self.stby_gen_status )
+        updated = updated or status_changed
+
+        status_changed, self.flcs_rly_status = get_lamp_status( self.FLCS_RLY, self.flcs_rly_status )
+        updated = updated or status_changed
+
+        status_changed, self.epu_status = get_lamp_status( self.EPU, self.epu_status )
+        updated = updated or status_changed
+
+        payload = string.format( "%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d",
                                  self.gear_nose_status,
                                  self.gear_left_status,
                                  self.gear_right_status,
@@ -131,7 +168,12 @@ function P.create_lamp_status_payload(self)
                                  self.rwr_act_power_status,
                                  self.rwr_alt_low_status,
                                  self.rwr_alt_status,
-                                 self.rwr_power_status )
+                                 self.rwr_power_status,
+                                 self.jfs_run_status,
+                                 self.main_gen_status,
+                                 self.stby_gen_status,
+                                 self.flcs_rly_status,
+                                 self.epu_status )
     end
 
     return updated, payload
