@@ -18,6 +18,11 @@
 --      RWR AUX Alt
 --      RWR Power
 --      Speed brake position
+--      JFS RUN
+--      MAIN GEN
+--      STBY GEN
+--      FLCS RLY
+--      EPU
 --
 --  A-10C:
 --      Speed brake position
@@ -26,6 +31,7 @@
 --  F/A-18C Hornet:
 --      Speed brake position
 --      Console light control level
+--      APU
 --
 --  JF-17:
 --      GEAR Nose
@@ -37,8 +43,10 @@
 --
 --
 -- Author: slughead
--- Last edit: 03/03/2024
+-- Last edit: 09/03/2025
 --
+-- Version 1.0.9 - Added F-16C JFS RUN, MAIN GEN, STBY GEN, FLCS RLY and EPU lamps.
+--               - Added F-18C APU lamp.
 -- Version 1.0.8 - Added missing init functions and corrected call to init to fix errors in dcs.log
 -- Version 1.0.7 - Added JF-17 aircraft files for Viper TQS (Tigershark2005)
 -- Version 1.0.6 - Added logic for A-10C/A-10C2/F/A-18C left and right engine
@@ -54,7 +62,7 @@ local generic_aircraft_utils
 
 local dcs2target = {}
 
-    dcs2target.VERSION = "DCS2TARGET v1.0.7"
+    dcs2target.VERSION = "DCS2TARGET v1.0.8"
 
     dcs2target.lastUpdateTime = DCS.getModelTime()
 
