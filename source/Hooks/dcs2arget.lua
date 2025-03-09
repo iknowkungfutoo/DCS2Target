@@ -62,7 +62,7 @@ local generic_aircraft_utils
 
 local dcs2target = {}
 
-    dcs2target.VERSION = "DCS2TARGET v1.0.8"
+    dcs2target.VERSION = "DCS2TARGET v1.0.9"
 
     dcs2target.lastUpdateTime = DCS.getModelTime()
 
