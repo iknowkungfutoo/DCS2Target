@@ -41,8 +41,8 @@ The following aircraft are currently supported:
 |------------|-----------------------------------------------------------------|-------------------------------|
 | A-10C | Speed brake position and console lighting. | Warthog |
 | A-10C_2 | Speed brake position and console lighting. | Warthog |
-| F-16 | Gear, gear warning, TWA indications and the speed brake position. | Viper Mission Pack, Viper Panel |
-| FA-18_Hornet | Speed brake position and console lighting. | Warthog |
+| F-16 | Gear, gear warning, TWA indications, JFS RUN, MAIN GEN, STBY GEN, FLCS RLY, EPU RUN and the speed brake position. | Viper Mission Pack, Viper Panel |
+| FA-18_Hornet | Speed brake position, console lighting and APU RUN. | Warthog |
 | JF-17 | Gear, gear warning, gear transit, master warning and the speed brake position. | Viper Mission Pack, Viper Panel |
 | Su-25T |Speed brake position. | Warthog |
 | Su-33 |Speed brake position. | Warthog |
