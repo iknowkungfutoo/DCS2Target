@@ -14,6 +14,7 @@
 ------------------------------------------------------------------------------
 
 -- DCS World OpenBeta\Mods\aircraft\FA-18C\Cockpit\Scripts\clickabledata.lua
+-- elements["pnt_404"]		= default_3_position_tumb(_("Battery Switch, ON/OFF/ORIDE"),				devices.ELEC_INTERFACE, elec_commands.BattSw,				404)
 -- elements["pnt_402"]		= default_2_position_tumb(_("Left Generator Control Switch, NORM/OFF"),		devices.ELEC_INTERFACE, elec_commands.LGenSw,				402)
 -- elements["pnt_403"]		= default_2_position_tumb(_("Right Generator Control Switch, NORM/OFF"),	devices.ELEC_INTERFACE, elec_commands.RGenSw,				403)
 -- elements["pnt_413"]		= default_axis_limited(_("CONSOLES Lights Dimmer Control"),			devices.CPT_LIGHTS,		cptlights_commands.Consoles,	413, 0, 0.15, nil, nil, nil, {90, -135}, {90, -45})
@@ -25,15 +26,39 @@
 local P = {}
 fa_18c_hornet_lamps = P
 
-    P.CONSOLE_LIGHT_DIAL = 413
+    P.CPT_LTS_APU_READY = 376
+    P.BATTERY_SWITCH    = 404
+
     P.LEFT_GENERATOR_CONTROL_SWITCH = 402
     P.RIGHT_GENERATOR_CONTROL_SWITCH = 403
+    P.CONSOLE_LIGHT_DIAL = 413
 
-    P.CPT_LTS_APU_READY = 376
 
-    P.apu_lamp_value      = nil
-    P.speedbrakes_value   = nil
-    P.console_light_value = nil
+    P.battery_switch_value = nil
+    P.apu_lamp_value       = nil
+    P.speedbrakes_value    = nil
+    P.console_light_value  = nil
+
+
+local function get_battery_switch_value( current_value )
+
+    local updated = false
+    local value = 0
+
+    local device = Export.GetDevice(0)
+    if (type(device) ~= "number" and device ~= nil) then
+        local aircraft_lamp_utils = require("fa-18c_hornet_lamps")
+
+        value = device:get_argument_value(aircraft_lamp_utils.BATTERY_SWITCH)
+
+        if current_value ~= value then
+            updated = true
+        end
+    end
+
+    return updated, value
+
+end
 
 local function get_apu_lamp_value( current_value )
 
@@ -41,7 +66,7 @@ local function get_apu_lamp_value( current_value )
     local value = 0
 
     local device = Export.GetDevice(0)
-    if type(device) ~= "number" and device ~= nil then
+    if (type(device) ~= "number" and device ~= nil) then
         local aircraft_lamp_utils = require("fa-18c_hornet_lamps")
 
         value = device:get_argument_value(aircraft_lamp_utils.CPT_LTS_APU_READY)
@@ -59,7 +84,7 @@ local function get_console_light_value( current_value )
     local value = 0
 
     local device = Export.GetDevice(0)
-    if type(device) ~= "number" and device ~= nil then
+    if (type(device) ~= "number" and device ~= nil) then
         local aircraft_lamp_utils = require("fa-18c_hornet_lamps")
 
         -- get engine info
@@ -112,7 +137,7 @@ function P.create_lamp_status_payload( self )
     local payload
 
     local device = Export.GetDevice(0)
-    if type(device) ~= "number" and device ~= nil then
+    if (type(device) ~= "number" and device ~= nil) then
         status_changed, self.apu_lamp_value = get_apu_lamp_value( self.apu_lamp_value )
         updated = updated or status_changed
 
@@ -121,6 +146,13 @@ function P.create_lamp_status_payload( self )
 
         status_changed, self.console_light_value = get_console_light_value( self.console_light_value )
         updated = updated or status_changed
+
+        status_changed, self.battery_switch_value = get_battery_switch_value( self.battery_switch_value )
+        if (self.battery_switch_value == 1 and self.console_light_value == 0) then
+            -- set console lights to minimum (not off) so that the Warthog LEDs can be see, e.g. the APU light
+            self.console_light_value = 1
+            updated = true
+        end
 
         payload = string.format( "%d%d%d",
                                  self.apu_lamp_value,

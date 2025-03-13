@@ -45,15 +45,18 @@
 -- Author: slughead
 -- Last edit: 09/03/2025
 --
--- Version 1.0.9 - Added F-16C JFS RUN, MAIN GEN, STBY GEN, FLCS RLY and EPU lamps.
---               - Added F-18C APU lamp.
--- Version 1.0.8 - Added missing init functions and corrected call to init to fix errors in dcs.log
--- Version 1.0.7 - Added JF-17 aircraft files for Viper TQS (Tigershark2005)
--- Version 1.0.6 - Added logic for A-10C/A-10C2/F/A-18C left and right engine
---                 logic for console illumination.
--- Version 1.0.5 - Added F/A-18C Hornet console light control.
--- Version 1.0.4 - Converted from export.lua to "hooks" file.
--- Version 1.0.3 - Added A-10C console light control.
+-- Version 1.0.10 - Console lighting on Warthog is set to minimum (not off) when the battery is "On"
+--                  to allow user configurable LEDs to be visible when activated, e.g. for APU Run.
+--                  When the battery is "Off", the Warthog backlighting is set to off.
+-- Version 1.0.9  - Added F-16C JFS RUN, MAIN GEN, STBY GEN, FLCS RLY and EPU lamps.
+--                  Added F-18C APU lamp.
+-- Version 1.0.8  - Added missing init functions and corrected call to init to fix errors in dcs.log
+-- Version 1.0.7  - Added JF-17 aircraft files for Viper TQS (Tigershark2005)
+-- Version 1.0.6  - Added logic for A-10C/A-10C2/F/A-18C left and right engine
+--                  logic for console illumination.
+-- Version 1.0.5  - Added F/A-18C Hornet console light control.
+-- Version 1.0.4  - Converted from export.lua to "hooks" file.
+-- Version 1.0.3  - Added A-10C console light control.
 --
 ------------------------------------------------------------------------------
 
@@ -62,7 +65,7 @@ local generic_aircraft_utils
 
 local dcs2target = {}
 
-    dcs2target.VERSION = "DCS2TARGET v1.0.9"
+    dcs2target.VERSION = "DCS2TARGET v1.0.10"
 
     dcs2target.lastUpdateTime = DCS.getModelTime()
 
