@@ -46,9 +46,7 @@
 -- Author: slughead
 -- Last edit: 25/03/2025
 --
--- Version 1.0.11a - Added F-18C gear handle lamp and mapped to flash Warthog user LED1.
---                   F-18C speed brake remains on Warthof user LEDs 1 through 4 with LED1
---                   shared with gear handle lamp.
+-- Version 1.0.11a - Added export of F-18C gear handle lamp.
 --                   Fixed F-18C problem where post first cold start, on subsequent
 --                   cold starts, the console lights would always be on even though the
 --                   battery was OFF.
