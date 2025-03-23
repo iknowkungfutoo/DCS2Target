@@ -9,7 +9,7 @@
 -- TMHotasLEDSync.tmc script.
 --
 -- Author: slughead
--- Date: 03/12/2023
+-- Date: 23/03/2025
 --
 ------------------------------------------------------------------------------
 
@@ -21,23 +21,26 @@
 
 -- DCS World OpenBeta\Mods\aircraft\FA-18C\Cockpit\Scripts\MainPanel\lamps.lua
 -- APU Control Panel
+-- create_caution_lamp(227, CautionLights.CPT_LTS_LDG_GEAR_HANDLE)
 -- create_caution_lamp(376,	CautionLights.CPT_LTS_APU_READY)
+
 
 local P = {}
 fa_18c_hornet_lamps = P
 
-    P.CPT_LTS_APU_READY = 376
-    P.BATTERY_SWITCH    = 404
+    P.CPT_LTS_LDG_GEAR_HANDLE = 227
+    P.CPT_LTS_APU_READY       = 376
 
-    P.LEFT_GENERATOR_CONTROL_SWITCH = 402
+    P.LEFT_GENERATOR_CONTROL_SWITCH  = 402
     P.RIGHT_GENERATOR_CONTROL_SWITCH = 403
-    P.CONSOLE_LIGHT_DIAL = 413
+    P.BATTERY_SWITCH                 = 404
+    P.CONSOLE_LIGHT_DIAL             = 413
 
-
-    P.battery_switch_value = nil
-    P.apu_lamp_value       = nil
-    P.speedbrakes_value    = nil
-    P.console_light_value  = nil
+    P.landing_gear_handle_lamp_value = nil
+    P.apu_lamp_value                 = nil
+    P.battery_switch_value           = nil
+    P.console_light_value            = nil
+    P.speedbrakes_value              = nil
 
 
 local function get_battery_switch_value( current_value )
@@ -58,6 +61,25 @@ local function get_battery_switch_value( current_value )
 
     return updated, value
 
+end
+
+local function get_landing_gear_handle_lamp_value( current_value )
+
+    local updated = false
+    local value = 0
+
+    local device = Export.GetDevice(0)
+    if (type(device) ~= "number" and device ~= nil) then
+        local aircraft_lamp_utils = require("fa-18c_hornet_lamps")
+
+        value = device:get_argument_value(aircraft_lamp_utils.CPT_LTS_LDG_GEAR_HANDLE)
+
+        if current_value ~= value then
+            updated = true
+        end
+    end
+
+    return updated, value
 end
 
 local function get_apu_lamp_value( current_value )
@@ -134,32 +156,42 @@ function P.create_lamp_status_payload( self )
 
     local updated        = false
     local status_changed = false
-    local payload
+
+    local console_light_value = 0
+
+    local payload = "0000"
 
     local device = Export.GetDevice(0)
     if (type(device) ~= "number" and device ~= nil) then
+
+        status_changed, self.landing_gear_handle_lamp_value = get_landing_gear_handle_lamp_value( self.landing_gear_handle_lamp_value )
+        updated = updated or status_changed
+
         status_changed, self.apu_lamp_value = get_apu_lamp_value( self.apu_lamp_value )
         updated = updated or status_changed
 
         status_changed, self.speedbrakes_value = get_speedbrake_value( self.speedbrakes_value )
         updated = updated or status_changed
 
+        status_changed, self.battery_switch_value = get_battery_switch_value( self.battery_switch_value )
+
         status_changed, self.console_light_value = get_console_light_value( self.console_light_value )
         updated = updated or status_changed
 
-        status_changed, self.battery_switch_value = get_battery_switch_value( self.battery_switch_value )
-        if (self.battery_switch_value == 1 and self.console_light_value == 0) then
-            -- set console lights to minimum (not off) so that the Warthog LEDs can be see, e.g. the APU light
-            self.console_light_value = 1
-            updated = true
-        end
+        if (updated) then
+            if (self.battery_switch_value == 1 and self.console_light_value == 0) then
+                -- set console lights to minimum (not off) so that the Warthog LEDs can be seen, e.g. the APU light
+                console_light_value = 1
+            else
+                console_light_value = self.console_light_value
+            end
 
-        payload = string.format( "%d%d%d",
-                                 self.apu_lamp_value,
-                                 self.speedbrakes_value,
-                                 self.console_light_value )
-    else
-        payload = "000"
+            payload = string.format( "%d%d%d%d",
+                                        self.apu_lamp_value,
+                                        self.speedbrakes_value,
+                                        console_light_value,
+                                        self.landing_gear_handle_lamp_value )
+        end
     end
 
     return updated, payload
