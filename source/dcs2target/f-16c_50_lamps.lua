@@ -103,6 +103,23 @@ local function get_lamp_status( id, status )
 end
 
 function P.init( self )
+
+    P.gear_nose_status     = nil
+    P.gear_left_status     = nil
+    P.gear_right_status    = nil
+    P.gear_warning_status  = nil
+    P.rwr_search_status    = nil
+    P.rwr_activity_status  = nil
+    P.rwr_act_power_status = nil
+    P.rwr_alt_low_status   = nil
+    P.rwr_alt_status       = nil
+    P.rwr_power_status     = nil
+    P.jfs_run_status       = nil
+    P.main_gen_status      = nil
+    P.stby_gen_status      = nil
+    P.flcs_rly_status      = nil
+    P.epu_status           = nil
+
 end
 
 function P.create_lamp_status_payload(self)

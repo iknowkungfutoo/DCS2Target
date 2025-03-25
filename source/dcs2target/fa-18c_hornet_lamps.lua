@@ -150,6 +150,13 @@ local function get_speedbrake_value( current_value )
 end
 
 function P.init( self )
+
+    P.landing_gear_handle_lamp_value = nil
+    P.apu_lamp_value                 = nil
+    P.battery_switch_value           = nil
+    P.console_light_value            = nil
+    P.speedbrakes_value              = nil
+
 end
 
 function P.create_lamp_status_payload( self )
@@ -174,6 +181,7 @@ function P.create_lamp_status_payload( self )
         updated = updated or status_changed
 
         status_changed, self.battery_switch_value = get_battery_switch_value( self.battery_switch_value )
+        updated = updated or status_changed
 
         status_changed, self.console_light_value = get_console_light_value( self.console_light_value )
         updated = updated or status_changed

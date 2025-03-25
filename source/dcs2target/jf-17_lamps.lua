@@ -49,6 +49,14 @@ local function get_lamp_status( id, status )
 end
 
 function P.init( self )
+
+    P.gear_transit_status       = nil
+    P.gear_nose_status          = nil
+    P.gear_left_status          = nil
+    P.gear_right_status         = nil
+    P.gear_warning_status       = nil
+    P.master_warning_status     = nil
+
 end
 
 function P.create_lamp_status_payload(self)

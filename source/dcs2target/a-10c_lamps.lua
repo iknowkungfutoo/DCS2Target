@@ -83,8 +83,10 @@ local function get_speedbrake_value( current_value )
 end
 
 function P.init( self )
-    --self.speedbrakes_value   = nil
-    --self.console_light_value = nil
+
+    self.speedbrakes_value   = nil
+    self.console_light_value = nil
+
 end
 
 function P.create_lamp_status_payload( self )
