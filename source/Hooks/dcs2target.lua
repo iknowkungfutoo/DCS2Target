@@ -44,12 +44,13 @@
 --
 --
 -- Author: slughead
--- Last edit: 25/03/2025
+-- Last edit: 28/03/2025
 --
--- Version 1.0.11a - Added export of F-18C gear handle lamp.
+-- Version 1.0.11  - Added export of F-18C gear handle lamp.
 --                   Fixed F-18C problem where post first cold start, on subsequent
 --                   cold starts, the console lights would always be on even though the
 --                   battery was OFF.
+--                   Port changed to a random port in user port space.
 -- Version 1.0.10  - Console lighting on Warthog is set to minimum (not off) when the battery is "On"
 --                   to allow user configurable LEDs to be visible when activated, e.g. for APU Run.
 --                   When the battery is "Off", the Warthog backlighting is set to off.
@@ -72,7 +73,7 @@ local generic_aircraft_utils
 
 local dcs2target = {}
 
-    dcs2target.VERSION = "DCS2TARGET v1.0.11a"
+    dcs2target.VERSION = "DCS2TARGET v1.0.11"
 
     dcs2target.lastUpdateTime = DCS.getModelTime()
 
