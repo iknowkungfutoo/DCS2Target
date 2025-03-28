@@ -65,6 +65,8 @@
 --
 ------------------------------------------------------------------------------
 
+
+
 local tm_target_utils
 local generic_aircraft_utils
 
@@ -98,7 +100,7 @@ function dcs2target.onSimulationStart()
     socket = require("socket")
 
     host = host or "localhost"
-    port = port or 2323
+    port = port or 29914
 
     target_socket = socket.try(socket.connect(host, port))
     log.write('dcs2target', log.INFO, 'Connected to T.A.R.G.E.T.')
