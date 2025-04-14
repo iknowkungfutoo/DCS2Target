@@ -9,7 +9,7 @@
 -- TMHotasLEDSync.tmc script.
 --
 -- Author: slughead
--- Date: 23/03/2025
+-- Date: 14/04/2025
 --
 ------------------------------------------------------------------------------
 
@@ -60,7 +60,6 @@ local function get_battery_switch_value( current_value )
     end
 
     return updated, value
-
 end
 
 local function get_landing_gear_handle_lamp_value( current_value )
