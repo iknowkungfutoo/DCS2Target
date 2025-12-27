@@ -9,7 +9,7 @@
 -- TMHotasLEDSync.tmc script.
 --
 -- Author: slughead
--- Last edit: 03/03/2024
+-- Last edit: 26/12/2025
 --
 ------------------------------------------------------------------------------
 
@@ -19,35 +19,25 @@ generic_aircraft_utils = P
     P.speedbrakes_value = nil
 
 function P.init( self )
-    self.speedbrakes_value   = nil
+    P.speedbrakes_value   = nil
 end
 
 function P.create_speedbrake_status_payload( self, aircraft_name )
 
-    local updated = false
-    local payload
+    local updated = true
+    local payload = "000"
 
     local lMechInfo = Export.LoGetMechInfo() -- mechanical components,  e.g. Flaps, Wheelbrakes,...
     if (lMechInfo ~= nil) then
         local value = lMechInfo.speedbrakes.value
 
         -- fudge factor for aircraft that do not use the full 0 to 1.0 range for speedbrake
-        --if (aircraft_name == "A-10C")   then value = value * 1.3; end
-        --if (aircraft_name == "A-10C_2") then value = value * 1.3; end
+        if (aircraft_name == "A-10C_2") then value = value * 1.3; end
 
         -- ensure full range is used for aircraft that almost reach 1.0
-        if (value >= 0.9) then value = 1.0 end
+        if (value >= 0.95) then value = 1.0 end
 
-        value = math.floor(value * 5)
-        payload = string.format("%d", value)
-
-        if (self.speedbrakes_value ~= value) then
-            self.speedbrakes_value = value
-
-            updated = true;
-        end
-    else
-        payload = string.format("%d", 0)
+        payload = string.format("%03d", value * 100) -- percent with leading zeros
     end
 
     return updated, payload

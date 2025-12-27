@@ -24,15 +24,23 @@
 --      FLCS RLY
 --      EPU
 --
---  A-10C:
+--  A-10C/A-10C2:
+--      GEAR Nose
+--      GEAR Left
+--      GEAR Right
+--      GEAR Warning (handle)
 --      Speed brake position
+--      Canopy open lamp
 --      Console light control level
 --
 --  F/A-18C Hornet:
+--      GEAR Nose
+--      GEAR Left
+--      GEAR Right
+--      GEAR Warning (handle)
 --      Speed brake position
 --      Console light control level
 --      APU
---      Gear handle
 --
 --  JF-17:
 --      GEAR Nose
@@ -41,15 +49,21 @@
 --      GEAR Warning (handle)
 --      GEAR Transit
 --      Master warning (on/off)
+--      Speed brake position
 --
 --
 -- Author: slughead
--- Last edit: 14/04/2025
+-- Last edit: 26/12/2025
 --
+-- Version 1.0.13  - Added export of F/A-18C nose, left and right gear light lamps.
+--                   Added export of A-10C/A-10C2, nose, left and right gear light lamps.
+--                   Speed brake exported for JF-17.
+--                   Speed brake position now sent as percentage over three characters (000..100)
+--                   Removed support for Su-33 and Su-25T
 -- Version 1.0.12  - Added export of A-10C/A-10C2 gear handle lamp.
 --                   Added export of A-10C/A-10C2 canopy open lamp.
--- Version 1.0.11  - Added export of F-18C gear handle lamp.
---                   Fixed F-18C problem where post first cold start, on subsequent
+-- Version 1.0.11  - Added export of F/A-18C gear handle lamp.
+--                   Fixed F/A-18C problem where post first cold start, on subsequent
 --                   cold starts, the console lights would always be on even though the
 --                   battery was OFF.
 --                   Port changed to a random port in user port space.
@@ -57,14 +71,14 @@
 --                   to allow user configurable LEDs to be visible when activated, e.g. for APU Run.
 --                   When the battery is "Off", the Warthog backlighting is set to off.
 -- Version 1.0.9   - Added F-16C JFS RUN, MAIN GEN, STBY GEN, FLCS RLY and EPU lamps.
---                   Added F-18C APU lamp.
+--                   Added F/A-18C APU lamp.
 -- Version 1.0.8   - Added missing init functions and corrected call to init to fix errors in dcs.log
 -- Version 1.0.7   - Added JF-17 aircraft files for Viper TQS (Tigershark2005)
 -- Version 1.0.6   - Added logic for A-10C/A-10C2/F/A-18C left and right engine
 --                   logic for console illumination.
 -- Version 1.0.5   - Added F/A-18C Hornet console light control.
 -- Version 1.0.4   - Converted from export.lua to "hooks" file.
--- Version 1.0.3   - Added A-10C console light control.
+-- Version 1.0.3   - Added A-10C/A-10C2 console light control.
 --
 ------------------------------------------------------------------------------
 
@@ -75,7 +89,7 @@ local generic_aircraft_utils
 
 local dcs2target = {}
 
-    dcs2target.VERSION = "DCS2TARGET v1.0.12"
+    dcs2target.VERSION = "DCS2TARGET v1.0.13"
 
     dcs2target.lastUpdateTime = DCS.getModelTime()
 
@@ -172,17 +186,6 @@ function dcs2target.onSimulationFrame()
         local send_update = false
         local payload
 
-        if ( dcs2target.aircraft.Name == "Su-25T" or
-             dcs2target.aircraft.Name == "Su-33" ) then
-
-            local speedbrake_status_payload
-            local updated = false
-
-            updated, speedbrake_status_payload = generic_aircraft_utils:create_speedbrake_status_payload( dcs2target.aircraft.Name )
-            payload = speedbrake_status_payload
-            send_update = updated
-        end
-
         if (dcs2target.aircraft.Name == "A-10C" or dcs2target.aircraft.Name == "A-10C_2") then
             local lamp_status_payload
             local updated = false
@@ -190,6 +193,10 @@ function dcs2target.onSimulationFrame()
             updated, lamp_status_payload = dcs2target.aircraft_lamp_utils:create_lamp_status_payload()
             payload = lamp_status_payload
             send_update = updated
+
+            updated, speedbrake_status_payload = generic_aircraft_utils:create_speedbrake_status_payload( dcs2target.aircraft.Name )
+            payload = payload..speedbrake_status_payload
+            send_update = send_update or updated
         end
 
         if (dcs2target.aircraft.Name == "F-16C_50") then
@@ -199,7 +206,7 @@ function dcs2target.onSimulationFrame()
 
             updated, lamp_status_payload = dcs2target.aircraft_lamp_utils:create_lamp_status_payload()
             payload = lamp_status_payload
-            send_update = send_update or updated
+            send_update = updated
 
             updated, speedbrake_status_payload = generic_aircraft_utils:create_speedbrake_status_payload( dcs2target.aircraft.Name )
             payload = payload..speedbrake_status_payload
@@ -208,11 +215,16 @@ function dcs2target.onSimulationFrame()
 
         if (dcs2target.aircraft.Name == "FA-18C_hornet") then
             local lamp_status_payload
+            local speedbrake_status_payload
             local updated = false
 
             updated, lamp_status_payload = dcs2target.aircraft_lamp_utils:create_lamp_status_payload()
             payload = lamp_status_payload
             send_update = updated
+
+            updated, speedbrake_status_payload = generic_aircraft_utils:create_speedbrake_status_payload( dcs2target.aircraft.Name )
+            payload = payload..speedbrake_status_payload
+            send_update = send_update or updated
         end
 
         if (dcs2target.aircraft.Name == "JF-17") then
@@ -222,6 +234,10 @@ function dcs2target.onSimulationFrame()
             updated, lamp_status_payload = dcs2target.aircraft_lamp_utils:create_lamp_status_payload()
             payload = lamp_status_payload
             send_update = updated
+
+            updated, speedbrake_status_payload = generic_aircraft_utils:create_speedbrake_status_payload( dcs2target.aircraft.Name )
+            payload = payload..speedbrake_status_payload
+            send_update = send_update or updated
         end
 
         if send_update then

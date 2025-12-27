@@ -9,7 +9,7 @@
 -- script.
 --
 -- Author: slughead
--- Date: 14/04/2025
+-- Date: 26/12/2025
 --
 ------------------------------------------------------------------------------
 
@@ -26,14 +26,20 @@
 -- APU_RPM.arg_number	= 13
 -- gear_handle.arg_number	= 716
 -- caution_lamp(665,SystemsSignals.flag_CANOPY_UNLOCKED)
+-- caution_lamp(659,SystemsSignals.flag_LANDING_GEAR_N_SAFE)
+-- caution_lamp(660,SystemsSignals.flag_LANDING_GEAR_L_SAFE)
+-- caution_lamp(661,SystemsSignals.flag_LANDING_GEAR_R_SAFE)
 -- caution_lamp(737,SystemsSignals.flag_HANDLE_GEAR_WARNING)
 
 
 local P = {}
 a_10c_lamps = P
 
-    P.CANOPY_UNLOCKED     = 665
-    P.HANDLE_GEAR_WARNING = 737
+    P.CANOPY_UNLOCKED          = 665
+    P.LANDING_GEAR_N_SAFE      = 659
+    P.LANDING_GEAR_L_SAFE      = 660
+    P.LANDING_GEAR_R_SAFE      = 661
+    P.HANDLE_GEAR_WARNING      = 737
 
     P.APU_RPM_GUAGE            = 13
     P.APU_GEN_PWR_SWITCH       = 241
@@ -42,14 +48,31 @@ a_10c_lamps = P
     P.BATTERY_POWER            = 246
     P.CONSOLE_LIGHT_DIAL       = 297
 
-    P.canopy_unlocked_lamp_value     = nil
-    P.landing_gear_handle_lamp_value = nil
-    P.battery_switch_value           = nil
-    P.console_light_value            = nil
-    P.speedbrakes_value              = nil
+    P.canopy_unlocked_lamp     = nil
+    P.gear_nose_lamp           = nil
+    P.gear_left_lamp           = nil
+    P.gear_right_lamp          = nil
+    P.landing_gear_handle_lamp = nil
+    P.battery_switch           = nil
+    P.console_light            = nil
 
 
-local function get_battery_switch_value( current_value )
+local function get_lamp( id, status )
+    local updated = false
+    local value
+
+    local device = Export.GetDevice(0)
+    if type(device) ~= "number" and device ~= nil then
+        value = device:get_argument_value(id) -- returns 0 (Off) 1 (On)
+        if status ~= value then
+            updated = true
+        end
+    end
+
+    return updated, value
+end
+
+local function get_battery_switch( current_value )
 
     local updated = false
     local value = 0
@@ -68,45 +91,7 @@ local function get_battery_switch_value( current_value )
     return updated, value
 end
 
-local function get_landing_gear_handle_lamp_value( current_value )
-
-    local updated = false
-    local value = 0
-
-    local device = Export.GetDevice(0)
-    if (type(device) ~= "number" and device ~= nil) then
-        local aircraft_lamp_utils = require("a-10c_lamps")
-
-        value = device:get_argument_value(aircraft_lamp_utils.HANDLE_GEAR_WARNING)
-
-        if current_value ~= value then
-            updated = true
-        end
-    end
-
-    return updated, value
-end
-
-local function get_canopy_unlocked_lamp_value( current_value )
-
-    local updated = false
-    local value = 0
-
-    local device = Export.GetDevice(0)
-    if (type(device) ~= "number" and device ~= nil) then
-        local aircraft_lamp_utils = require("a-10c_lamps")
-
-        value = device:get_argument_value(aircraft_lamp_utils.CANOPY_UNLOCKED)
-
-        if current_value ~= value then
-            updated = true
-        end
-    end
-
-    return updated, value
-end
-
-local function get_console_light_value( current_value )
+local function get_console_light( current_value )
     local updated = false
     local value = 0
 
@@ -137,35 +122,15 @@ local function get_console_light_value( current_value )
     return updated, value
 end
 
-local function get_speedbrake_value( current_value )
-
-    local updated = false
-    local value = 0
-
-    local lMechInfo = Export.LoGetMechInfo() -- mechanical components,  e.g. Flaps, Wheelbrakes,...
-    if (lMechInfo ~= nil) then
-        value = lMechInfo.speedbrakes.value
-
-        -- A_10C fudge factor
-        value = value * 1.3
-
-        -- ensure full range is used for aircraft that almost reach 1.0
-        if (value >= 0.9) then value = 1.0 end
-
-        value = math.floor(value * 5)
-
-        if (current_value ~= value) then
-            updated = true;
-        end
-    end
-
-    return updated, value
-end
-
 function P.init( self )
 
-    self.speedbrakes_value   = nil
-    self.console_light_value = nil
+    P.canopy_unlocked_lamp     = nil
+    P.gear_nose_lamp           = nil
+    P.gear_left_lamp           = nil
+    P.gear_right_lamp          = nil
+    P.landing_gear_handle_lamp = nil
+    P.battery_switch           = nil
+    P.console_light            = nil
 
 end
 
@@ -173,43 +138,47 @@ function P.create_lamp_status_payload( self )
 
     local updated        = false
     local status_changed = false
+    local payload        = "000000"
 
-    local console_light_value = 0
-
-    local payload = "0000"
+    local console_light  = 0
 
     local device = Export.GetDevice(0)
     if type(device) ~= "number" and device ~= nil then
-
-        status_changed, self.landing_gear_handle_lamp_value = get_landing_gear_handle_lamp_value( self.landing_gear_handle_lamp_value )
+        status_changed, self.gear_nose_lamp = get_lamp( self.LANDING_GEAR_N_SAFE, self.gear_nose_lamp )
         updated = updated or status_changed
 
-        status_changed, self.canopy_unlocked_lamp_value = get_canopy_unlocked_lamp_value( self.canopy_unlocked_lamp_value )
+        status_changed, self.gear_left_lamp = get_lamp( self.LANDING_GEAR_L_SAFE, self.gear_left_lamp )
         updated = updated or status_changed
 
-        status_changed, self.speedbrakes_value = get_speedbrake_value( self.speedbrakes_value )
+        status_changed, self.gear_right_lamp = get_lamp( self.LANDING_GEAR_R_SAFE, self.gear_right_lamp )
         updated = updated or status_changed
 
-        status_changed, self.battery_switch_value = get_battery_switch_value( self.battery_switch_value )
+        status_changed, self.landing_gear_handle_lamp = get_lamp( self.HANDLE_GEAR_WARNING, self.landing_gear_handle_lamp )
         updated = updated or status_changed
 
-        status_changed, self.console_light_value = get_console_light_value( self.console_light_value )
+        status_changed, self.canopy_unlocked_lamp = get_lamp( self.CANOPY_UNLOCKED, self.canopy_unlocked_lamp )
         updated = updated or status_changed
 
-        if (updated) then
-            if (self.battery_switch_value == 1 and self.console_light_value == 0) then
-                -- set console lights to minimum (not off) so that the Warthog LEDs can be seen, e.g. the APU light
-                console_light_value = 1
-            else
-                console_light_value = self.console_light_value
-            end
+        status_changed, self.battery_switch = get_battery_switch( self.battery_switch )
+        updated = updated or status_changed
 
-            payload = string.format( "%d%d%d%d",
-                                        self.canopy_unlocked_lamp_value,
-                                        self.speedbrakes_value,
-                                        console_light_value,
-                                        self.landing_gear_handle_lamp_value )
+        status_changed, self.console_light = get_console_light( self.console_light )
+        updated = updated or status_changed
+
+        if (self.battery_switch == 1 and self.console_light == 0) then
+            -- set console lights to minimum (not off) so that the Warthog LEDs can be seen, e.g. the APU light
+            console_light = 1
+        else
+            console_light = self.console_light
         end
+
+        payload = string.format( "%d%d%d%d%d%d",
+                                    self.gear_nose_lamp,
+                                    self.gear_left_lamp,
+                                    self.gear_right_lamp,
+                                    self.landing_gear_handle_lamp,
+                                    self.canopy_unlocked_lamp,
+                                    console_light )
     end
 
     return updated, payload
