@@ -4,7 +4,7 @@ With the recent release of the new Thrustmaster Viper Mission Pack and Viper Pan
 
 Along with dcs2target, you will also need [TMHotasLEDSync](https://github.com/iknowkungfutoo/TMHotasLEDSync). Together, they enable the LEDs on the Viper Mission Pack, Viper Panel, and Warthog to relay the indicators in the DCS cockpits. There is a caveat, though, as I will explain below.
 
-For the Viper Mission Pack and Viper Panel, some LEDs can be used to relay the indicators of the F-16 landing gear, the landing gear handle and the threat warning auxiliary panel. It also has two columns of five user-programmable LEDs. However, the LEDs in the threat warning auxiliary switches do not fully mimic those of the real aircraft. Specifically, the "altitude" switch can either be illuminated red or green on the Viper Mission Pack / Panel as opposed to "LOW" in amber and "ALT" in green. Also, the ACT/PWR switch can only be illuminated fully instead of individually for "S" and "POWER". Therefore, we have to accept some compromises regarding how the indicators of the F-16 can be shown on the Viper Mission Pack / Panel.
+For the Viper Mission Pack and Viper Panel, some LEDs can be used to relay the indicators of the F-16 landing gear, the landing gear handle and the threat warning auxiliary panel. It also has two columns of five user-programmable LEDs. However, the LEDs in the threat warning auxiliary switches do not fully mimic those of the real aircraft. Specifically, the "altitude" switch can either be illuminated red or green on the Viper Mission Pack / Panel as opposed to "LOW" in amber and "ALT" in green. Also, the ACT/PWR switch has only one physical LED for what are two separate real-aircraft states, so it is lit solid for POWER and flashes to indicate activity, rather than showing both independently. Therefore, we have to accept some compromises regarding how the indicators of the F-16 can be shown on the Viper Mission Pack / Panel.
 
 For the Warthog, there is only a column of five LEDs for the user to configure.
 
@@ -39,10 +39,10 @@ The following aircraft are currently supported:
 
 | AIRCRAFT | EXPORTED PARAMETERS |
 |------------|-----------------------------------------------------------------|
-| A-10C | Speed brake position, gear warning, cockpit unlocked and console lighting. |
-| A-10C_2 | Speed brake position, gear warning, cockpit unlocked and console lighting. |
+| A-10C | Speed brake position, gear warning, cockpit unlocked, console lighting, Master Caution, Anti Skid, Inverter and Fire Warning status. |
+| A-10C_2 | Speed brake position, gear warning, cockpit unlocked, console lighting, Master Caution, Anti Skid, Inverter and Fire Warning status. |
 | F-16 | Gear, gear warning, TWA indications, JFS RUN, MAIN GEN, STBY GEN, FLCS RLY, EPU RUN and the speed brake position. |
-| FA-18_Hornet | Speed brake position, console lighting, APU RUN and Gear Handle lamp. |
+| FA-18_Hornet | Speed brake position, console lighting, APU RUN, Gear Handle lamp, Master Caution, Wing Fold, Launch Bar and Arresting Hook status. |
 | JF-17 | Gear, gear warning, gear transit, master warning and the speed brake position. |
 
 # Suggestions And Feature Requests:

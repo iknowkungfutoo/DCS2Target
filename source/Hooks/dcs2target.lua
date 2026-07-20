@@ -32,6 +32,10 @@
 --      Speed brake position
 --      Canopy open lamp
 --      Console light control level
+--      Master Caution
+--      Anti Skid
+--      Inverter
+--      Fire Warning (left engine, APU or right engine)
 --
 --  F/A-18C Hornet:
 --      GEAR Nose
@@ -41,6 +45,10 @@
 --      Speed brake position
 --      Console light control level
 --      APU
+--      Master Caution
+--      Wing Fold
+--      Launch Bar
+--      Arresting Hook
 --
 --  JF-17:
 --      GEAR Nose
@@ -53,8 +61,14 @@
 --
 --
 -- Author: slughead
--- Last edit: 26/12/2025
+-- Last edit: 20/07/2026
 --
+-- Version 1.0.14  - Added export of F/A-18C master caution, wing fold,
+--                   launch bar and arresting hook status for the Viper
+--                   TQS/BBox user-programmable LEDs (LED_USER_RIGHT_1..4).
+--                   Added export of A-10C/A-10C2 master caution, anti skid,
+--                   inverter and combined fire warning status for the same
+--                   user-programmable LEDs.
 -- Version 1.0.13  - Added export of F/A-18C nose, left and right gear light lamps.
 --                   Added export of A-10C/A-10C2, nose, left and right gear light lamps.
 --                   Speed brake exported for JF-17.
@@ -89,7 +103,7 @@ local generic_aircraft_utils
 
 local dcs2target = {}
 
-    dcs2target.VERSION = "DCS2TARGET v1.0.13"
+    dcs2target.VERSION = "DCS2TARGET v1.0.14"
 
     dcs2target.lastUpdateTime = DCS.getModelTime()
 
@@ -188,6 +202,7 @@ function dcs2target.onSimulationFrame()
 
         if (dcs2target.aircraft.Name == "A-10C" or dcs2target.aircraft.Name == "A-10C_2") then
             local lamp_status_payload
+            local caution_status_payload
             local updated = false
 
             updated, lamp_status_payload = dcs2target.aircraft_lamp_utils:create_lamp_status_payload()
@@ -196,6 +211,10 @@ function dcs2target.onSimulationFrame()
 
             updated, speedbrake_status_payload = generic_aircraft_utils:create_speedbrake_status_payload( dcs2target.aircraft.Name )
             payload = payload..speedbrake_status_payload
+            send_update = send_update or updated
+
+            updated, caution_status_payload = dcs2target.aircraft_lamp_utils:create_caution_status_payload()
+            payload = payload..caution_status_payload
             send_update = send_update or updated
         end
 
@@ -216,6 +235,7 @@ function dcs2target.onSimulationFrame()
         if (dcs2target.aircraft.Name == "FA-18C_hornet") then
             local lamp_status_payload
             local speedbrake_status_payload
+            local carrier_status_payload
             local updated = false
 
             updated, lamp_status_payload = dcs2target.aircraft_lamp_utils:create_lamp_status_payload()
@@ -224,6 +244,10 @@ function dcs2target.onSimulationFrame()
 
             updated, speedbrake_status_payload = generic_aircraft_utils:create_speedbrake_status_payload( dcs2target.aircraft.Name )
             payload = payload..speedbrake_status_payload
+            send_update = send_update or updated
+
+            updated, carrier_status_payload = dcs2target.aircraft_lamp_utils:create_carrier_status_payload()
+            payload = payload..carrier_status_payload
             send_update = send_update or updated
         end
 

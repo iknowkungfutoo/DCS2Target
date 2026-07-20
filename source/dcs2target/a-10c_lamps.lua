@@ -9,7 +9,7 @@
 -- script.
 --
 -- Author: slughead
--- Date: 26/12/2025
+-- Last edit: 20/07/2026
 --
 ------------------------------------------------------------------------------
 
@@ -30,6 +30,16 @@
 -- caution_lamp(660,SystemsSignals.flag_LANDING_GEAR_L_SAFE)
 -- caution_lamp(661,SystemsSignals.flag_LANDING_GEAR_R_SAFE)
 -- caution_lamp(737,SystemsSignals.flag_HANDLE_GEAR_WARNING)
+-- caution_lamp(404,SystemsSignals.flag_MASTER_WARNING_STUB)	-- MASTER WARNING
+-- caution_lamp(484,SystemsSignals.flag_ANTISKID)			-- CAUTION LIGHT PANEL
+-- caution_lamp(527,SystemsSignals.flag_INST_INV)			-- CAUTION LIGHT PANEL, Instrument Inverter
+-- caution_lamp(215,SystemsSignals.flag_L_ENG_FIRE)
+-- caution_lamp(216,SystemsSignals.flag_APU_FIRE)
+-- caution_lamp(217,SystemsSignals.flag_R_ENG_FIRE)
+
+-- Only a single fire warning LED is available on the TARGET side, so the
+-- three individual fire lamps (left engine, APU, right engine) are combined
+-- with OR logic into one fire_warning status bit.
 
 
 local P = {}
@@ -48,6 +58,13 @@ a_10c_lamps = P
     P.BATTERY_POWER            = 246
     P.CONSOLE_LIGHT_DIAL       = 297
 
+    P.MASTER_CAUTION           = 404
+    P.ANTI_SKID                = 484
+    P.INST_INVERTER            = 527
+    P.L_ENG_FIRE               = 215
+    P.APU_FIRE                 = 216
+    P.R_ENG_FIRE               = 217
+
     P.canopy_unlocked_lamp     = nil
     P.gear_nose_lamp           = nil
     P.gear_left_lamp           = nil
@@ -55,6 +72,10 @@ a_10c_lamps = P
     P.landing_gear_handle_lamp = nil
     P.battery_switch           = nil
     P.console_light            = nil
+    P.master_caution_lamp      = nil
+    P.anti_skid_lamp           = nil
+    P.inverter_lamp            = nil
+    P.fire_warning_status      = nil
 
 
 local function get_lamp( id, status )
@@ -122,6 +143,29 @@ local function get_console_light( current_value )
     return updated, value
 end
 
+local function get_fire_warning_status( current_value )
+    local updated = false
+    local value = 0
+
+    local device = Export.GetDevice(0)
+    if type(device) ~= "number" and device ~= nil then
+        local aircraft_lamp_utils = require("a-10c_lamps")
+
+        if (device:get_argument_value(aircraft_lamp_utils.L_ENG_FIRE) == 1 or
+            device:get_argument_value(aircraft_lamp_utils.APU_FIRE)   == 1 or
+            device:get_argument_value(aircraft_lamp_utils.R_ENG_FIRE) == 1)
+        then
+            value = 1
+        end
+
+        if current_value ~= value then
+            updated = true
+        end
+    end
+
+    return updated, value
+end
+
 function P.init( self )
 
     P.canopy_unlocked_lamp     = nil
@@ -131,6 +175,10 @@ function P.init( self )
     P.landing_gear_handle_lamp = nil
     P.battery_switch           = nil
     P.console_light            = nil
+    P.master_caution_lamp      = nil
+    P.anti_skid_lamp           = nil
+    P.inverter_lamp            = nil
+    P.fire_warning_status      = nil
 
 end
 
@@ -179,6 +227,37 @@ function P.create_lamp_status_payload( self )
                                     self.landing_gear_handle_lamp,
                                     self.canopy_unlocked_lamp,
                                     console_light )
+    end
+
+    return updated, payload
+
+end
+
+function P.create_caution_status_payload( self )
+
+    local updated        = false
+    local status_changed = false
+    local payload         = "0000"
+
+    local device = Export.GetDevice(0)
+    if type(device) ~= "number" and device ~= nil then
+        status_changed, self.master_caution_lamp = get_lamp( self.MASTER_CAUTION, self.master_caution_lamp )
+        updated = updated or status_changed
+
+        status_changed, self.anti_skid_lamp = get_lamp( self.ANTI_SKID, self.anti_skid_lamp )
+        updated = updated or status_changed
+
+        status_changed, self.inverter_lamp = get_lamp( self.INST_INVERTER, self.inverter_lamp )
+        updated = updated or status_changed
+
+        status_changed, self.fire_warning_status = get_fire_warning_status( self.fire_warning_status )
+        updated = updated or status_changed
+
+        payload = string.format( "%d%d%d%d",
+                                    self.master_caution_lamp,
+                                    self.anti_skid_lamp,
+                                    self.inverter_lamp,
+                                    self.fire_warning_status )
     end
 
     return updated, payload
