@@ -202,6 +202,7 @@ function dcs2target.onSimulationFrame()
 
         if (dcs2target.aircraft.Name == "A-10C" or dcs2target.aircraft.Name == "A-10C_2") then
             local lamp_status_payload
+            local speedbrake_status_payload
             local caution_status_payload
             local updated = false
 
@@ -253,6 +254,7 @@ function dcs2target.onSimulationFrame()
 
         if (dcs2target.aircraft.Name == "JF-17") then
             local lamp_status_payload
+            local speedbrake_status_payload
             local updated = false
 
             updated, lamp_status_payload = dcs2target.aircraft_lamp_utils:create_lamp_status_payload()
