@@ -7,7 +7,7 @@
 -- Utility functions for formating Thrustmaster Target TCP packets.
 --
 -- Author: slughead
--- Date: 26/11/2023
+-- Date: 21/07/2026
 --
 ------------------------------------------------------------------------------
 
@@ -37,6 +37,15 @@ local function bitand(a, b)
 
     return result
 
+end
+
+-- Builds one tag-value entry for the update payload: tag + length digit +
+-- zero-padded value, per WIRE_PROTOCOL.md, e.g. P.tag_entry("B", 75, 3) ->
+-- "B3075". `width` must be 1-9 (single length digit). Callers only build an
+-- entry for fields that actually changed - see WIRE_PROTOCOL.md's "Sender
+-- rule".
+function P.tag_entry( tag, value, width )
+    return tag .. tostring(width) .. string.format("%0" .. width .. "d", value)
 end
 
 function P.pack_data(data)

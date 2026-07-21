@@ -9,7 +9,7 @@
 -- script.
 --
 -- Author: slughead
--- Last edit: 03/03/2024
+-- Last edit: 21/07/2026
 --
 ------------------------------------------------------------------------------
 
@@ -47,6 +47,8 @@
 -- rwr_Sys              = create_rwr_lights(150, RWRLights.SYSTEST)
 -- rwr_Sep_Up           = create_rwr_lights(152, RWRLights.TGTSEP_UP)
 -- rwr_Sep_Down         = create_rwr_lights(138, RWRLights.TGTSEP_DOWN)
+
+local tm_target_utils = require("tm_target_utils")
 
 local P = {}
 f_16c_50_lamps = P
@@ -126,71 +128,69 @@ function P.create_lamp_status_payload(self)
 
     local updated        = false
     local status_changed = false
-    local payload
+    local payload         = ""
 
     local device = Export.GetDevice(0)
     if type(device) ~= "number" and device ~= nil then
         status_changed, self.gear_nose_status = get_lamp_status( self.GEAR_NOSE, self.gear_nose_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("N", self.gear_nose_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.gear_left_status = get_lamp_status( self.GEAR_LEFT, self.gear_left_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("L", self.gear_left_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.gear_right_status = get_lamp_status( self.GEAR_RIGHT, self.gear_right_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("R", self.gear_right_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.gear_warning_status = get_lamp_status( self.GEAR_WARNING, self.gear_warning_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("W", self.gear_warning_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.rwr_search_status = get_lamp_status( self.RWR_SEARCH, self.rwr_search_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("Q", self.rwr_search_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.rwr_activity_status = get_lamp_status( self.RWR_ACTIVITY, self.rwr_activity_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("A", self.rwr_activity_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.rwr_act_power_status = get_lamp_status( self.RWR_ACT_POWER, self.rwr_act_power_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("Z", self.rwr_act_power_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.rwr_alt_low_status = get_lamp_status( self.RWR_ALT_LOW, self.rwr_alt_low_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("J", self.rwr_alt_low_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.rwr_alt_status = get_lamp_status( self.RWR_ALT, self.rwr_alt_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("E", self.rwr_alt_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.rwr_power_status = get_lamp_status( self.RWR_POWER, self.rwr_power_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("V", self.rwr_power_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.jfs_run_status = get_lamp_status( self.JFS_RUN, self.jfs_run_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("S", self.jfs_run_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.main_gen_status = get_lamp_status( self.MAIN_GEN, self.main_gen_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("G", self.main_gen_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.stby_gen_status = get_lamp_status( self.STBY_GEN, self.stby_gen_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("T", self.stby_gen_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.flcs_rly_status = get_lamp_status( self.FLCS_RLY, self.flcs_rly_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("C", self.flcs_rly_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.epu_status = get_lamp_status( self.EPU, self.epu_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("U", self.epu_status, 1) end
         updated = updated or status_changed
-
-        payload = string.format( "%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d",
-                                 self.gear_nose_status,
-                                 self.gear_left_status,
-                                 self.gear_right_status,
-                                 self.gear_warning_status,
-                                 self.rwr_search_status,
-                                 self.rwr_activity_status,
-                                 self.rwr_act_power_status,
-                                 self.rwr_alt_low_status,
-                                 self.rwr_alt_status,
-                                 self.rwr_power_status,
-                                 self.jfs_run_status,
-                                 self.main_gen_status,
-                                 self.stby_gen_status,
-                                 self.flcs_rly_status,
-                                 self.epu_status )
     end
 
     return updated, payload

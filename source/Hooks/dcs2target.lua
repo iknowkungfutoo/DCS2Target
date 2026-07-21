@@ -61,8 +61,15 @@
 --
 --
 -- Author: slughead
--- Last edit: 20/07/2026
+-- Last edit: 21/07/2026
 --
+-- Version 2.0.0   - Switched the update ('u') packet from a fixed-position
+--                   format to the tag-value protocol documented in
+--                   WIRE_PROTOCOL.md - only fields that actually changed are
+--                   sent now, each self-labelled with a tag letter and
+--                   length, instead of every field at a fixed character
+--                   offset every frame. Breaking change - requires
+--                   TMHotasLEDSync built against the same protocol version.
 -- Version 1.0.14  - Added export of F/A-18C master caution, wing fold,
 --                   launch bar and arresting hook status for the Viper
 --                   TQS/BBox user-programmable LEDs (LED_USER_RIGHT_1..4).
@@ -103,7 +110,8 @@ local generic_aircraft_utils
 
 local dcs2target = {}
 
-    dcs2target.VERSION = "DCS2TARGET v1.0.14"
+    dcs2target.VERSION_NUMBER = "2.0.0"
+    dcs2target.VERSION        = "DCS2TARGET v"..dcs2target.VERSION_NUMBER
 
     dcs2target.lastUpdateTime = DCS.getModelTime()
 
@@ -114,7 +122,32 @@ local dcs2target = {}
 
 
 local function create_version_payload()
-    return tm_target_utils.VERSION..dcs2target.VERSION
+    -- "D" is the exporter type code TMHotasLEDSync uses to recognize
+    -- dcs2target specifically - see WIRE_PROTOCOL.md's "Version handshake"
+    -- section. Only the bare version number follows, not the full
+    -- descriptive dcs2target.VERSION string (that's used for local logging).
+    return tm_target_utils.VERSION.."D"..dcs2target.VERSION_NUMBER
+end
+
+-- Robust TCP send - LuaSocket's send() can return a partial byte count
+-- (on a "timeout" error) instead of always transmitting the whole payload
+-- in one call. Without retrying the unsent remainder here, the dropped
+-- bytes would desync TMHotasLEDSync's length-prefixed packet framing, so
+-- every send in this file goes through here rather than calling
+-- target_socket:send() directly.
+local function send_all(data)
+    local start = 1
+    while start <= #data do
+        local last_sent, err, partial_sent = target_socket:send(data, start)
+
+        if last_sent then
+            start = last_sent + 1
+        elseif err == "timeout" then
+            start = partial_sent + 1
+        else
+            socket.try(nil, err)
+        end
+    end
 end
 
 function dcs2target.onSimulationStart()
@@ -140,7 +173,7 @@ function dcs2target.onSimulationStart()
         target_socket:setoption("tcp-nodelay", true)
 
         local payload = create_version_payload()
-        socket.try(target_socket:send( tm_target_utils.pack_data(payload) ))
+        send_all( tm_target_utils.pack_data(payload) )
     end
 
     generic_aircraft_utils = require('generic_aircraft_utils')
@@ -152,7 +185,7 @@ function dcs2target.onSimulationStop()
     dcs2target.aircraft_lamp_utils = nil
 
     if target_socket then
-        socket.try(target_socket:send( tm_target_utils.pack_data(tm_target_utils.QUIT) ))
+        send_all( tm_target_utils.pack_data(tm_target_utils.QUIT) )
         target_socket:close()
     end
 

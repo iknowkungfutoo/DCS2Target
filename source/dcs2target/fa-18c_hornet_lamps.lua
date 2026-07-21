@@ -9,7 +9,7 @@
 -- TMHotasLEDSync.tmc script.
 --
 -- Author: slughead
--- Last edit: 20/07/2026
+-- Last edit: 21/07/2026
 --
 ------------------------------------------------------------------------------
 
@@ -44,6 +44,8 @@
 -- fold handle's own PULL/STOW device argument (296) instead, as a proxy for
 -- "handle engaged" rather than true wing position.
 
+
+local tm_target_utils = require("tm_target_utils")
 
 local P = {}
 fa_18c_hornet_lamps = P
@@ -176,47 +178,52 @@ function P.create_lamp_status_payload( self )
 
     local updated        = false
     local status_changed = false
-    local payload        = "000000"
-
-    local console_light  = 0
+    local payload        = ""
 
     local device = Export.GetDevice(0)
     if (type(device) ~= "number" and device ~= nil) then
         status_changed, self.gear_nose_lamp = get_lamp( self.CPT_LTS_NOSE_GEAR, self.gear_nose_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("N", self.gear_nose_lamp, 1) end
         updated = updated or status_changed
 
         status_changed, self.gear_left_lamp = get_lamp( self.CPT_LTS_LEFT_GEAR, self.gear_left_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("L", self.gear_left_lamp, 1) end
         updated = updated or status_changed
 
         status_changed, self.gear_right_lamp = get_lamp( self.CPT_LTS_RIGHT_GEAR, self.gear_right_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("R", self.gear_right_lamp, 1) end
         updated = updated or status_changed
 
         status_changed, self.landing_gear_handle_lamp = get_lamp( self.CPT_LTS_LDG_GEAR_HANDLE, self.landing_gear_handle_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("H", self.landing_gear_handle_lamp, 1) end
         updated = updated or status_changed
 
         status_changed, self.apu_lamp = get_lamp( self.CPT_LTS_APU_READY, self.apu_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("P", self.apu_lamp, 1) end
         updated = updated or status_changed
 
-        status_changed, self.battery_switch = get_battery_switch( self.battery_switch )
-        updated = updated or status_changed
+        local battery_changed
+        battery_changed, self.battery_switch = get_battery_switch( self.battery_switch )
+        updated = updated or battery_changed
 
-        status_changed, self.console_light = get_console_light( self.console_light )
-        updated = updated or status_changed
+        local console_raw_changed
+        console_raw_changed, self.console_light = get_console_light( self.console_light )
+        updated = updated or console_raw_changed
 
-        if (self.battery_switch == 1 and self.console_light == 0) then
-            -- set console lights to minimum (not off) so that the Warthog LEDs can be seen, e.g. the APU light
-            console_light = 1
-        else
-            console_light = self.console_light
+        -- console_light tag reflects a derived value (raw dial reading, or a
+        -- forced minimum brightness when the battery is on but the dial
+        -- reads off), so it needs sending whenever EITHER contributing raw
+        -- field changes, not just when the dial itself does.
+        if (battery_changed or console_raw_changed) then
+            local console_light
+            if (self.battery_switch == 1 and self.console_light == 0) then
+                -- set console lights to minimum (not off) so that the Warthog LEDs can be seen, e.g. the APU light
+                console_light = 1
+            else
+                console_light = self.console_light
+            end
+            payload = payload..tm_target_utils.tag_entry("C", console_light, 1)
         end
-
-        payload = string.format( "%d%d%d%d%d%d",
-                                    self.gear_nose_lamp,
-                                    self.gear_left_lamp,
-                                    self.gear_right_lamp,
-                                    self.landing_gear_handle_lamp,
-                                    self.apu_lamp,
-                                    console_light )
     end
 
     return updated, payload
@@ -227,17 +234,20 @@ function P.create_carrier_status_payload( self )
 
     local updated        = false
     local status_changed = false
-    local payload         = "0000"
+    local payload         = ""
 
     local device = Export.GetDevice(0)
     if (type(device) ~= "number" and device ~= nil) then
         status_changed, self.master_caution_lamp = get_lamp( self.CPT_LTS_MASTER_CAUTION, self.master_caution_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("M", self.master_caution_lamp, 1) end
         updated = updated or status_changed
 
         status_changed, self.launch_bar_status = get_lamp( self.LAUNCH_BAR_SWITCH, self.launch_bar_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("X", self.launch_bar_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.hook_status = get_lamp( self.CPT_LTS_HOOK, self.hook_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("O", self.hook_status, 1) end
         updated = updated or status_changed
 
         -- LoGetMechInfo() has no wing-fold field at all for this aircraft
@@ -250,13 +260,8 @@ function P.create_carrier_status_payload( self )
         -- values while moving.
         local wing_fold_handle_value = device:get_argument_value( self.WING_FOLD_HANDLE_PULL )
         status_changed, self.wing_fold_status = get_argument_status( self.wing_fold_status, wing_fold_handle_value )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("D", self.wing_fold_status, 1) end
         updated = updated or status_changed
-
-        payload = string.format( "%d%d%d%d",
-                                    self.master_caution_lamp,
-                                    self.wing_fold_status,
-                                    self.launch_bar_status,
-                                    self.hook_status )
     end
 
     return updated, payload

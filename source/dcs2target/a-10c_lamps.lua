@@ -9,7 +9,7 @@
 -- script.
 --
 -- Author: slughead
--- Last edit: 20/07/2026
+-- Last edit: 21/07/2026
 --
 ------------------------------------------------------------------------------
 
@@ -41,6 +41,8 @@
 -- three individual fire lamps (left engine, APU, right engine) are combined
 -- with OR logic into one fire_warning status bit.
 
+
+local tm_target_utils = require("tm_target_utils")
 
 local P = {}
 a_10c_lamps = P
@@ -186,47 +188,52 @@ function P.create_lamp_status_payload( self )
 
     local updated        = false
     local status_changed = false
-    local payload        = "000000"
-
-    local console_light  = 0
+    local payload        = ""
 
     local device = Export.GetDevice(0)
     if type(device) ~= "number" and device ~= nil then
         status_changed, self.gear_nose_lamp = get_lamp( self.LANDING_GEAR_N_SAFE, self.gear_nose_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("N", self.gear_nose_lamp, 1) end
         updated = updated or status_changed
 
         status_changed, self.gear_left_lamp = get_lamp( self.LANDING_GEAR_L_SAFE, self.gear_left_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("L", self.gear_left_lamp, 1) end
         updated = updated or status_changed
 
         status_changed, self.gear_right_lamp = get_lamp( self.LANDING_GEAR_R_SAFE, self.gear_right_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("R", self.gear_right_lamp, 1) end
         updated = updated or status_changed
 
         status_changed, self.landing_gear_handle_lamp = get_lamp( self.HANDLE_GEAR_WARNING, self.landing_gear_handle_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("H", self.landing_gear_handle_lamp, 1) end
         updated = updated or status_changed
 
         status_changed, self.canopy_unlocked_lamp = get_lamp( self.CANOPY_UNLOCKED, self.canopy_unlocked_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("K", self.canopy_unlocked_lamp, 1) end
         updated = updated or status_changed
 
-        status_changed, self.battery_switch = get_battery_switch( self.battery_switch )
-        updated = updated or status_changed
+        local battery_changed
+        battery_changed, self.battery_switch = get_battery_switch( self.battery_switch )
+        updated = updated or battery_changed
 
-        status_changed, self.console_light = get_console_light( self.console_light )
-        updated = updated or status_changed
+        local console_raw_changed
+        console_raw_changed, self.console_light = get_console_light( self.console_light )
+        updated = updated or console_raw_changed
 
-        if (self.battery_switch == 1 and self.console_light == 0) then
-            -- set console lights to minimum (not off) so that the Warthog LEDs can be seen, e.g. the APU light
-            console_light = 1
-        else
-            console_light = self.console_light
+        -- console_light tag reflects a derived value (raw dial reading, or a
+        -- forced minimum brightness when the battery is on but the dial
+        -- reads off), so it needs sending whenever EITHER contributing raw
+        -- field changes, not just when the dial itself does.
+        if (battery_changed or console_raw_changed) then
+            local console_light
+            if (self.battery_switch == 1 and self.console_light == 0) then
+                -- set console lights to minimum (not off) so that the Warthog LEDs can be seen, e.g. the APU light
+                console_light = 1
+            else
+                console_light = self.console_light
+            end
+            payload = payload..tm_target_utils.tag_entry("C", console_light, 1)
         end
-
-        payload = string.format( "%d%d%d%d%d%d",
-                                    self.gear_nose_lamp,
-                                    self.gear_left_lamp,
-                                    self.gear_right_lamp,
-                                    self.landing_gear_handle_lamp,
-                                    self.canopy_unlocked_lamp,
-                                    console_light )
     end
 
     return updated, payload
@@ -237,27 +244,25 @@ function P.create_caution_status_payload( self )
 
     local updated        = false
     local status_changed = false
-    local payload         = "0000"
+    local payload         = ""
 
     local device = Export.GetDevice(0)
     if type(device) ~= "number" and device ~= nil then
         status_changed, self.master_caution_lamp = get_lamp( self.MASTER_CAUTION, self.master_caution_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("M", self.master_caution_lamp, 1) end
         updated = updated or status_changed
 
         status_changed, self.anti_skid_lamp = get_lamp( self.ANTI_SKID, self.anti_skid_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("S", self.anti_skid_lamp, 1) end
         updated = updated or status_changed
 
         status_changed, self.inverter_lamp = get_lamp( self.INST_INVERTER, self.inverter_lamp )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("I", self.inverter_lamp, 1) end
         updated = updated or status_changed
 
         status_changed, self.fire_warning_status = get_fire_warning_status( self.fire_warning_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("F", self.fire_warning_status, 1) end
         updated = updated or status_changed
-
-        payload = string.format( "%d%d%d%d",
-                                    self.master_caution_lamp,
-                                    self.anti_skid_lamp,
-                                    self.inverter_lamp,
-                                    self.fire_warning_status )
     end
 
     return updated, payload

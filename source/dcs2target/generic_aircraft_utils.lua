@@ -9,9 +9,14 @@
 -- TMHotasLEDSync.tmc script.
 --
 -- Author: slughead
--- Last edit: 26/12/2025
+-- Last edit: 21/07/2026
 --
 ------------------------------------------------------------------------------
+
+-- tm_target_utils is required (not just referenced as a global) because
+-- dcs2target.lua's own copy is a file-local variable, not a real Lua
+-- global - require() returns the same cached module instance either way.
+local tm_target_utils = require("tm_target_utils")
 
 local P = {}
 generic_aircraft_utils = P
@@ -24,8 +29,8 @@ end
 
 function P.create_speedbrake_status_payload( self, aircraft_name )
 
-    local updated = true
-    local payload = "000"
+    local updated = false
+    local payload = ""
 
     local lMechInfo = Export.LoGetMechInfo() -- mechanical components,  e.g. Flaps, Wheelbrakes,...
     if (lMechInfo ~= nil) then
@@ -37,7 +42,13 @@ function P.create_speedbrake_status_payload( self, aircraft_name )
         -- ensure full range is used for aircraft that almost reach 1.0
         if (value >= 0.95) then value = 1.0 end
 
-        payload = string.format("%03d", value * 100) -- percent with leading zeros
+        local percent = math.floor(value * 100)
+
+        if (P.speedbrakes_value ~= percent) then
+            updated = true
+            P.speedbrakes_value = percent
+            payload = tm_target_utils.tag_entry("B", percent, 3)
+        end
     end
 
     return updated, payload

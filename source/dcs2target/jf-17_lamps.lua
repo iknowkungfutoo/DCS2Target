@@ -9,12 +9,14 @@
 -- script.
 --
 -- Author: Tigershark2005
--- Last edit: 03/03/2024
+-- Last edit: 21/07/2026
 --
 ------------------------------------------------------------------------------
 
 -- Output bytes are in the order of, gear nose, gear left, gear right, gear warning, gear transit, aircraft master warning
 -- DCS World\Mods\aircraft\JF-17\Cockpit\Scripts\MainPanel\lamps.lua
+
+local tm_target_utils = require("tm_target_utils")
 
 local P = {}
 jf_17_lamps = P
@@ -63,36 +65,33 @@ function P.create_lamp_status_payload(self)
 
     local updated        = false
     local status_changed = false
-    local payload
+    local payload         = ""
 
     local device = Export.GetDevice("LIGHTS")
     if type(device) ~= "number" and device ~= nil then
         status_changed, self.gear_nose_status = get_lamp_status( self.GEAR_NOSE, self.gear_nose_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("N", self.gear_nose_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.gear_left_status = get_lamp_status( self.GEAR_LEFT, self.gear_left_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("L", self.gear_left_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.gear_right_status = get_lamp_status( self.GEAR_RIGHT, self.gear_right_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("R", self.gear_right_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.gear_warning_status = get_lamp_status( self.GEAR_WARNING, self.gear_warning_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("W", self.gear_warning_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.gear_transit_status = get_lamp_status( self.GEAR_TRANSIT, self.gear_transit_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("T", self.gear_transit_status, 1) end
         updated = updated or status_changed
 
         status_changed, self.master_warning_status = get_lamp_status( self.MASTER_WARNING, self.master_warning_status )
+        if status_changed then payload = payload..tm_target_utils.tag_entry("G", self.master_warning_status, 1) end
         updated = updated or status_changed
-
-        payload = string.format( "%d%d%d%d%d%d",
-                                 self.gear_nose_status,
-                                 self.gear_left_status,
-                                 self.gear_right_status,
-                                 self.gear_warning_status,
-                                 self.gear_transit_status,
-                                 self.master_warning_status
-                                 )
     end
 
     return updated, payload
