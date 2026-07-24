@@ -63,6 +63,10 @@
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of DCS2Target is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
+    <!-- Without this, the "Apps & features" / "Programs and Features" entry falls back to a generic Windows Installer icon. -->
+    <Icon Id="AppIcon.ico" SourceFile="../DCS2Target.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+
     <!--
       The Windows "Saved Games" known folder (FOLDERID_SavedGames) is what
       DCS itself resolves before appending "DCS" / "DCS.openbeta" - it isn't
