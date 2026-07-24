@@ -1,6 +1,6 @@
 # What Is DCS2TARGET?
 
-With the recent release of the new Thrustmaster Viper Mission Pack and Viper Panel, many users have shared their dismay that the landing gear and other indicators are not working/integrated with DCS. This isn't a fault of the product or Thrustmaster as there are far too many applications, each with their unique style of exposing simulation data. It isn't fair to expect Thrustmaster to support all of those applications and this is where the community fills the gap.
+Out of the box, the Thrustmaster Viper Mission Pack and Viper Panel landing gear and other indicators are not functional and are not integrated with DCS or Falcon BMS. This isn't a fault of the product or Thrustmaster as there are far too many applications, each with their unique style of exposing simulation data. It isn't fair to expect Thrustmaster to support all of those applications and this is where the community fills the gap.
 
 Along with dcs2target, you will also need [TMHotasLEDSync](https://github.com/iknowkungfutoo/TMHotasLEDSync). Together, they enable the LEDs on the Viper Mission Pack, Viper Panel, and Warthog to relay the indicators in the DCS cockpits. There is a caveat, though, as I will explain below.
 
@@ -10,7 +10,7 @@ For the Warthog, there is only a column of five LEDs for the user to configure.
 
 # How It Works:
 
-The dcs2target.zip file contains a set of lua files that interrogate DCS and send the relevant lamp data to the Thrustmaster TARGET software running the TMHotasLEDSync.tmc script. Data is sent via TCP only if the simulation data changes. The TARGET script handles each packet through an event, so it is fairly efficient and should not introduce any significant load on your CPU.
+DCS2Target is a set of lua files that interrogate DCS and send the relevant lamp data to the Thrustmaster TARGET software running the TMHotasLEDSync.tmc script. Data is sent via TCP only if the simulation data changes. The TARGET script handles each packet through an event, so it is fairly efficient and should not introduce any significant load on your CPU.
 
 The DCS simulation data is interrogated every 100ms (that’s ten times a second). It’s not too taxing on the system yet fast enough so that we humans shouldn’t notice any lag.
 
@@ -18,20 +18,16 @@ The TARGET script does not configure your HOTAS throttle for use with DCS. It me
 
 # Installation:
 
-The dcs2target.zip file contains two folders: Hooks and dcs2target. Extract the folders and save them in the "%HOMEPATH%\Saved Games\DCS\Scripts" or "%HOMEPATH%\Saved Games\DCS.openbeta\Scripts" folder or both if you use both stable and open beta builds.
-Your "%HOMEPATH%\Saved Games\DCS\Scripts" and "Saved Games\DCS.openbeta\Scripts" folders should now have two folders:
+Run `dcs2target.msi`. It detects which of your DCS Saved Games folders (Stable and/or Open Beta) already exist and installs into those by default, with checkboxes to add or remove either one. Uninstalling via Windows' "Apps & Features" removes everything it installed.
 
-1. Hooks
-2. dcs2export
+The installer only supports the two standard folder names (`DCS` and `DCS.openbeta`). If you use a `dcs_variant.txt`-renamed Saved Games folder, run the installer with Stable or Open Beta checked and then manually copy the resulting `Hooks` and `dcs2target` folders from that Saved Games location into your custom one.
 
-Unzip the [TMHotasLEDSync.zip](https://github.com/iknowkungfutoo/TMHotasLEDSync) file to a folder of your choosing.
+Install [TMHotasLEDSync](https://github.com/iknowkungfutoo/TMHotasLEDSync) using its MSI installer. This creates a "Thrustmaster HOTAS LED Sync" shortcut in a "Slughead Products" Start Menu folder that automatically starts the Thrustmaster T.A.R.G.E.T. software with the TMHotasLEDSync.tmc script loaded and running.
 
 # How To Use:
 
-1. Start the Thrustmaster T.A.R.G.E.T. script editor.
-2. Open the TMHotasLEDSync.tmc script from the folder where you extracted TMHotasLEDSync.zip.
-3. Start the script.
-4. Start DCS.
+1. Run the "Thrustmaster HOTAS LED Sync" shortcut created by its installer (Start Menu > Slughead Products, or the Desktop if you chose that option).
+2. Start DCS.
 
 # Supported Aircraft:
 
@@ -51,7 +47,6 @@ Feel free to make any suggestions for improvements on [dcs2target DCS thread](ht
 
 # Need Help?
 
-In the first instance, ensure you have installed the latest version of the Thrustmaster TARGET software and reboot your machine after any updates. Most problems are caused by people running old versions of the software and not rebooting after updating.
-If that does not solve your problem, raise an issue on the [dcs2target DCS thread](https://forum.dcs.world/topic/338119-dcs2target-dcs-to-thrustmaster-hotas-led-controller-viper-mission-pack-viper-panel-and-warthog/#comments) or [here](https://github.com/iknowkungfutoo/DCS2Target/issues). Include your dcs.log and TARGET script editor console output in your message (you can select, copy and paste directly from the TARGET console output using your mouse).
+Raise an issue on the [dcs2target DCS thread](https://forum.dcs.world/topic/338119-dcs2target-dcs-to-thrustmaster-hotas-led-controller-viper-mission-pack-viper-panel-and-warthog/#comments) or [here](https://github.com/iknowkungfutoo/DCS2Target/issues). Include your dcs.log and TARGET script editor console output in your message (you can select all using CTRL-A, copy using CTRL-C and paste with CTRL-V directly from the TARGET console output using your mouse).
 
 

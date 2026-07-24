@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DCS2Target installer.
+
+  Copies the Hooks/ and dcs2target/ Lua modules into the Scripts folder of
+  one or both DCS "Saved Games" installs (Stable and/or Open Beta).
+
+  UpgradeCode must stay the same across every release - it's what lets a
+  newer installer detect and replace an older install instead of installing
+  side-by-side. Never change it after the first release.
+
+  KNOWN ISSUE - Scope="perUser" uninstall does not remove files: WiX v7's
+  perUser scope has a registration bug (see wixtoolset/issues#8101 - other
+  reports of perUser + a non-standard target directory losing track of
+  installed files on uninstall) - after a perUser install, Windows
+  Installer's per-user Component-tracking registry key
+  (HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\<SID>\
+  Products\<id>\Components) ends up completely empty even though
+  ProcessComponents reports success, so `msiexec /x` (and Programs &
+  Features "Uninstall") exit successfully but leave every copied .lua file
+  in place. Confirmed via direct registry inspection and a fully isolated
+  scratch-folder test - not a bug in this file's own Component/File
+  authoring, and not something worth chasing further here (Scope=
+  "perMachine" is the documented workaround, but trades away admin-free
+  install for it - not worth it for a few small text files). Fixed via the
+  RemoveStableFiles/RemoveOpenBetaFiles CustomActions further down instead
+  of relying on MSI's own (broken) tracking.
+
+  NOT SUPPORTED - a custom/dcs_variant.txt-renamed Saved Games folder: only
+  ever tried as an install-time UI feature (checkbox + browse), never
+  shipped. A Feature's Level Condition (the mechanism Stable/OpenBeta both
+  use) is evaluated once, during the very first CostFinalize pass, which
+  runs *before* any dialog is ever shown - Stable/OpenBeta don't hit this in
+  practice because their properties are already finalised by then (the
+  *_DEFAULTED auto-detect logic runs earlier still), but a property only
+  ever set by an interactive checkbox click has no such early value, so
+  checking a Custom-folder box and clicking Next resulted in nothing being
+  installed, silently, no error. Multiple different fixes were attempted
+  (AddLocal/Remove ControlEvents, a static Level="0" with ADDLOCAL/REMOVE-
+  only selection, building ADDLOCAL/REMOVE from scratch in
+  InstallExecuteSequence) and every one of them still only worked when the
+  property was set *before* the install sequence started (i.e. from the
+  command line), never from the interactive checkbox click that's the
+  entire point of having a checkbox - not worth the complexity for what's
+  expected to be a rare setup. See README.md for what a
+  dcs_variant.txt/custom-folder user should do instead (install to a
+  standard folder via this installer, then copy the resulting Hooks and
+  dcs2target folders across by hand).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <?define ProductVersion = "2.0.0" ?>
+  <?define SavedGamesGuid = "{4C5C32FF-BB9D-43B0-B5B4-2D72E54EAAA4}" ?>
+
+  <Package Name="DCS2Target"
+           Manufacturer="DCS2Target"
+           Version="$(var.ProductVersion)"
+           UpgradeCode="76ffe370-7fa2-43b2-a1c0-00a8ead0e066"
+           Compressed="yes"
+           Scope="perUser">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of DCS2Target is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!--
+      The Windows "Saved Games" known folder (FOLDERID_SavedGames) is what
+      DCS itself resolves before appending "DCS" / "DCS.openbeta" - it isn't
+      necessarily "%USERPROFILE%\Saved Games" (it's user-redirectable), so
+      read it from the same place Explorer/DCS do rather than hardcoding a
+      path. This registry value only exists once Windows has initialised the
+      known folder, which happens automatically for virtually all real
+      Windows profiles - the "%USERPROFILE%\Saved Games\" fallback below
+      only matters on a never-touched folder redirection setup.
+    -->
+    <Property Id="SAVEDGAMESFOLDER">
+      <RegistrySearch Id="SavedGamesRegSearch"
+                       Root="HKCU"
+                       Key="Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders"
+                       Name="$(var.SavedGamesGuid)"
+                       Type="raw" />
+    </Property>
+    <SetProperty Id="SAVEDGAMESFOLDER" Value="[%USERPROFILE]\Saved Games\" Before="CostFinalize" Condition="NOT SAVEDGAMESFOLDER" />
+
+    <!--
+      Detect which of the two standard branch folders already exist, to
+      default the picker checkboxes sensibly. Deliberately checks
+      "%USERPROFILE%\Saved Games\..." directly (a plain formatted-string
+      env-var expansion, resolved immediately) rather than
+      "[SAVEDGAMESFOLDER]DCS" - a first attempt at the latter found nothing
+      on a machine with a real DCS.openbeta folder, because AppSearch
+      entries in different Property chains aren't guaranteed to resolve in
+      any particular order within a single AppSearch pass, so this
+      DirectorySearch would run before SAVEDGAMESFOLDER's own
+      RegistrySearch had a value (confirmed via a silent-install log; a
+      nested RegistrySearch->DirectorySearch chain was also tried and
+      still came back empty for reasons that weren't fully root-caused).
+      This only affects the checkbox's *default* state - the actual
+      install path still uses the registry-accurate SAVEDGAMESFOLDER
+      above, which resolved correctly in every test. The one accuracy gap
+      this leaves: on the rare setup where Saved Games is redirected away
+      from %USERPROFILE%, an existing DCS/DCS.openbeta folder there won't
+      get auto-detected - the checkbox just starts unchecked and the user
+      can still tick it manually.
+    -->
+    <Property Id="STABLE_FOUND">
+      <DirectorySearch Id="StableDirSearch" Path="[%USERPROFILE]\Saved Games\DCS" Depth="0" />
+    </Property>
+    <Property Id="OPENBETA_FOUND">
+      <DirectorySearch Id="OpenBetaDirSearch" Path="[%USERPROFILE]\Saved Games\DCS.openbeta" Depth="0" />
+    </Property>
+
+    <!--
+      A plain "SetProperty ... Condition=STABLE_FOUND" looked right but
+      isn't: WiX schedules a bare top-level SetProperty into *both*
+      InstallUISequence and InstallExecuteSequence. For an interactive
+      install that's a real bug, not just belt-and-braces redundancy - the
+      UI-sequence copy correctly pre-checks the box before TargetsDlg is
+      shown, but the Execute-sequence copy then reruns right before the
+      actual file copy and silently re-forces INSTALLSTABLE back to 1
+      whenever STABLE_FOUND is true, even if the user explicitly unchecked
+      the box. Confirmed via a silent install with INSTALLSTABLE=0 on the
+      command line while pointed at a scratch folder where STABLE_FOUND
+      was true: the override got clobbered back to 1.
+      The *_DEFAULTED tracking property makes each SetProperty a true
+      one-shot: it fires at most once (in whichever sequence runs first for
+      a given install - UI for interactive, Execute for /quiet), and having
+      fired, never fires again in the same install to reconsider a value
+      the user (or a command-line override) may have since changed.
+    -->
+    <!--
+      Neither INSTALLSTABLE/INSTALLOPENBETA nor *_DEFAULTED has a baked
+      Value attribute - both need to stay genuinely unset (not "0") until
+      something explicitly touches them, since "NOT PROPERTY" is how MSI
+      condition syntax tests "was this ever set" (by command line, by AppSearch,
+      by a UI CheckBox, or by an earlier SetProperty). A baked Value="0"
+      would make "NOT INSTALLSTABLE" always false, which breaks two things
+      at once:
+        - a command-line override (INSTALLSTABLE=0) would be
+          indistinguishable from "just my own default" and get
+          auto-detect-overwritten right back to 1 (this happened: a silent
+          install with INSTALLSTABLE=0/INSTALLOPENBETA=0 against a scratch
+          folder where both *_FOUND were true still installed both).
+        - the *_DEFAULTED one-shot guard alone isn't enough either - it
+          only stops the *same* SetProperty firing twice, it doesn't stop
+          the *first* firing from clobbering a value that arrived from
+          somewhere else (the command line) before AppSearch ran.
+      NOT INSTALLSTABLE (an already-explicit value blocks the auto-detect
+      default) and NOT INSTALLSTABLE_DEFAULTED (a one-shot guard so that
+      unchecking the box in TargetsDlg - which un-sets the property again,
+      indistinguishable from "never touched" - doesn't get silently
+      reapplied by the InstallExecuteSequence copy of this same
+      SetProperty right before the actual file copy) are both required,
+      for two different clobbering paths.
+    -->
+    <Property Id="INSTALLSTABLE" Secure="yes" />
+    <Property Id="INSTALLSTABLE_DEFAULTED" Secure="yes" />
+    <SetProperty Id="INSTALLSTABLE" Value="1" Before="SetINSTALLSTABLE_DEFAULTED" Condition="STABLE_FOUND AND NOT INSTALLSTABLE_DEFAULTED AND NOT INSTALLSTABLE" />
+    <SetProperty Id="INSTALLSTABLE_DEFAULTED" Value="1" Before="CostFinalize" Condition="NOT INSTALLSTABLE_DEFAULTED" />
+
+    <Property Id="INSTALLOPENBETA" Secure="yes" />
+    <Property Id="INSTALLOPENBETA_DEFAULTED" Secure="yes" />
+    <SetProperty Id="INSTALLOPENBETA" Value="1" Before="SetINSTALLOPENBETA_DEFAULTED" Condition="OPENBETA_FOUND AND NOT INSTALLOPENBETA_DEFAULTED AND NOT INSTALLOPENBETA" />
+    <SetProperty Id="INSTALLOPENBETA_DEFAULTED" Value="1" Before="CostFinalize" Condition="NOT INSTALLOPENBETA_DEFAULTED" />
+
+    <StandardDirectory Id="TARGETDIR">
+      <Directory Id="SAVEDGAMESFOLDER" Name="SavedGames">
+        <Directory Id="STABLEDIR" Name="DCS">
+          <Directory Id="STABLE_SCRIPTS" Name="Scripts">
+            <Directory Id="STABLE_HOOKS" Name="Hooks" />
+            <Directory Id="STABLE_DCS2TARGET" Name="dcs2target" />
+          </Directory>
+        </Directory>
+        <Directory Id="OPENBETADIR" Name="DCS.openbeta">
+          <Directory Id="OPENBETA_SCRIPTS" Name="Scripts">
+            <Directory Id="OPENBETA_HOOKS" Name="Hooks" />
+            <Directory Id="OPENBETA_DCS2TARGET" Name="dcs2target" />
+          </Directory>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <!--
+      Hand-authored (not <Files Include> glob-harvested): the harvester
+      derives Component/File Ids from the source path alone, so the same
+      seven source files referenced from both target ComponentGroups
+      collide and silently get skipped for one of the two. Explicit
+      Components also let each get a fixed Guid, which auto-generated-Guid
+      mode refuses for a non-standard directory tree like ours (Saved Games
+      isn't one of MSI's recognised standard folders). Adding a new
+      aircraft lamp module (see CLAUDE.md) means adding one <Component>
+      here per target (Stable/OpenBeta).
+    -->
+    <ComponentGroup Id="StableHooksFiles" Directory="STABLE_HOOKS">
+      <Component Id="StableHooksDcs2target" Guid="58c8a145-9a92-411e-a924-33d01c862951">
+        <File Source="..\source\Hooks\dcs2target.lua" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+    <ComponentGroup Id="StableDcs2targetFiles" Directory="STABLE_DCS2TARGET">
+      <Component Id="StableA10cLamps" Guid="5a6e79ff-e0d8-4fcb-9e20-f12cb4e138e8">
+        <File Source="..\source\dcs2target\a-10c_lamps.lua" KeyPath="yes" />
+      </Component>
+      <Component Id="StableF16c50Lamps" Guid="afdc03be-8091-4762-986e-b6ee8c9f0599">
+        <File Source="..\source\dcs2target\f-16c_50_lamps.lua" KeyPath="yes" />
+      </Component>
+      <Component Id="StableFa18cLamps" Guid="b755ef4f-1dcc-48b5-a43b-d5671a6240e1">
+        <File Source="..\source\dcs2target\fa-18c_hornet_lamps.lua" KeyPath="yes" />
+      </Component>
+      <Component Id="StableGenericUtils" Guid="04f1c181-22a1-4d98-8a65-174d88c5f85c">
+        <File Source="..\source\dcs2target\generic_aircraft_utils.lua" KeyPath="yes" />
+      </Component>
+      <Component Id="StableJf17Lamps" Guid="8aef8415-c9e8-47a6-8b9c-b588a1a1b448">
+        <File Source="..\source\dcs2target\jf-17_lamps.lua" KeyPath="yes" />
+      </Component>
+      <Component Id="StableTmTargetUtils" Guid="69d969aa-6b78-48b9-bc26-6ab229615c19">
+        <File Source="..\source\dcs2target\tm_target_utils.lua" KeyPath="yes" />
+      </Component>
+      <Component Id="StableReadme" Guid="ce05a08e-3a12-4069-8a1a-3b7c561ccfc1">
+        <File Source="..\README.md" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="OpenBetaHooksFiles" Directory="OPENBETA_HOOKS">
+      <Component Id="OpenBetaHooksDcs2target" Guid="b16235d3-c5a9-4487-b952-de3bada45825">
+        <File Source="..\source\Hooks\dcs2target.lua" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+    <ComponentGroup Id="OpenBetaDcs2targetFiles" Directory="OPENBETA_DCS2TARGET">
+      <Component Id="OpenBetaA10cLamps" Guid="a8464047-f955-45a3-9ee4-544080d7039f">
+        <File Source="..\source\dcs2target\a-10c_lamps.lua" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenBetaF16c50Lamps" Guid="3b8e3b6b-0482-4219-8cbd-e8bd71ed2eee">
+        <File Source="..\source\dcs2target\f-16c_50_lamps.lua" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenBetaFa18cLamps" Guid="7a7cfd80-1ff8-49bc-9f1b-b05184970f06">
+        <File Source="..\source\dcs2target\fa-18c_hornet_lamps.lua" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenBetaGenericUtils" Guid="f1b30bca-7050-4e93-8e6f-f0628acb463b">
+        <File Source="..\source\dcs2target\generic_aircraft_utils.lua" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenBetaJf17Lamps" Guid="c927b699-1e13-4271-9ab7-b2eccfe24fa2">
+        <File Source="..\source\dcs2target\jf-17_lamps.lua" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenBetaTmTargetUtils" Guid="50a4b779-8da6-4c11-b1f9-71e72a8e7469">
+        <File Source="..\source\dcs2target\tm_target_utils.lua" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenBetaReadme" Guid="f4baa277-696c-450b-a1dd-25b78c566fcb">
+        <File Source="..\README.md" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!--
+      Two independent Features gate the two install targets. They're never
+      shown as a feature tree (TargetsDlg drives selection instead) - Level
+      flips to 0 whenever the matching INSTALL* property is falsy, which is
+      how a checkbox left unchecked keeps that target's files out of the
+      install.
+    -->
+    <Feature Id="StableFeature" Level="1">
+      <Level Value="0" Condition="NOT (INSTALLSTABLE = &quot;1&quot;)" />
+      <ComponentGroupRef Id="StableHooksFiles" />
+      <ComponentGroupRef Id="StableDcs2targetFiles" />
+    </Feature>
+    <Feature Id="OpenBetaFeature" Level="1">
+      <Level Value="0" Condition="NOT (INSTALLOPENBETA = &quot;1&quot;)" />
+      <ComponentGroupRef Id="OpenBetaHooksFiles" />
+      <ComponentGroupRef Id="OpenBetaDcs2targetFiles" />
+    </Feature>
+
+    <!--
+      Uninstall cleanup, working around the Scope="perUser" registration bug
+      documented above (search "KNOWN ISSUE" in this file): since Windows
+      Installer never registered our Components, its own uninstall logic has
+      no record of what to remove. These two CustomActions bypass that
+      entirely and just delete the specific files/folders this installer is
+      known to have created, directly, via cmd.exe.
+
+      Deliberately narrow in what they touch:
+        - Only `Scripts\Hooks\dcs2target.lua` (one named file) is deleted from
+          the Hooks folder, never the folder itself - Hooks is shared with
+          other DCS export scripts (e.g. OpenKneeboard's), confirmed to
+          coexist there on a real install.
+        - `Scripts\dcs2target\` is removed recursively, since that whole
+          folder exists solely for our own lamp modules - nothing else would
+          plausibly use a folder with that exact name.
+        - The now-possibly-empty `Scripts\Hooks` and `Scripts` folders get a
+          plain (non-recursive) rmdir attempt, so they're only actually
+          removed if this was the only thing in them; otherwise a harmless
+          no-op. The DCS/DCS.openbeta folder itself is never touched - it
+          holds a huge amount of other DCS user data unrelated to us.
+        - `del`/`rmdir` on a path that doesn't exist just fails harmlessly;
+          combined with Return="ignore", nothing here can fail the uninstall.
+          That's what makes it safe to run unconditionally (REMOVE="ALL"
+          alone) rather than trying to reconstruct "was this specific target
+          actually installed" from properties that, per the
+          INSTALLSTABLE/INSTALLOPENBETA comment above, get re-defaulted from
+          current folder existence on every run anyway.
+        - Execute="immediate" rather than the usual deferred/CustomActionData
+          two-step: that pattern exists for rollback safety during install,
+          which doesn't apply to cleanup during a destructive uninstall (the
+          worst case of it failing here is exactly today's status quo - some
+          files left behind - not data loss).
+    -->
+    <CustomAction Id="RemoveStableFiles"
+                  Directory="TARGETDIR"
+                  ExeCommand="&quot;[SystemFolder]cmd.exe&quot; /c del /f /q &quot;[SAVEDGAMESFOLDER]DCS\Scripts\Hooks\dcs2target.lua&quot; &amp; rmdir /s /q &quot;[SAVEDGAMESFOLDER]DCS\Scripts\dcs2target&quot; &amp; rmdir &quot;[SAVEDGAMESFOLDER]DCS\Scripts\Hooks&quot; &amp; rmdir &quot;[SAVEDGAMESFOLDER]DCS\Scripts&quot;"
+                  Execute="immediate"
+                  Return="ignore" />
+    <CustomAction Id="RemoveOpenBetaFiles"
+                  Directory="TARGETDIR"
+                  ExeCommand="&quot;[SystemFolder]cmd.exe&quot; /c del /f /q &quot;[SAVEDGAMESFOLDER]DCS.openbeta\Scripts\Hooks\dcs2target.lua&quot; &amp; rmdir /s /q &quot;[SAVEDGAMESFOLDER]DCS.openbeta\Scripts\dcs2target&quot; &amp; rmdir &quot;[SAVEDGAMESFOLDER]DCS.openbeta\Scripts\Hooks&quot; &amp; rmdir &quot;[SAVEDGAMESFOLDER]DCS.openbeta\Scripts&quot;"
+                  Execute="immediate"
+                  Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="RemoveStableFiles" After="RemoveFiles" Condition="REMOVE=&quot;ALL&quot;" />
+      <Custom Action="RemoveOpenBetaFiles" After="RemoveFiles" Condition="REMOVE=&quot;ALL&quot;" />
+    </InstallExecuteSequence>
+
+    <!--
+      WixUI_InstallDir already declares ARPNOMODIFY="1" itself (disabling
+      "Change" in Add/Remove Programs / MaintenanceTypeDlg) - which suits us
+      fine, since our target selection isn't a WiX Feature tree and there'd
+      be nothing for stock Modify UI to meaningfully change after the fact.
+      Repair/Remove remain available.
+    -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="STABLEDIR" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <!--
+      Custom "TargetsDlg" spliced into the stock WixUI_InstallDir sequence in
+      place of InstallDirDlg (a single-folder picker, which doesn't fit our
+      two-independent-targets design): License -> TargetsDlg -> VerifyReady.
+      InstallDirDlg itself is left unreferenced by the override Publish
+      entries below and simply goes unused - harmless in MSI.
+
+      This all has to live in the same file as everything it references
+      (SAVEDGAMESFOLDER/STABLE_FOUND/etc. above, ui:WixUI just above) - WiX's
+      linker drops an entire Fragment with no incoming reference, and a
+      separate UI-only file with nothing pulling it in was silently dropped
+      during development (empty Dialog table, no error) before this was
+      merged back into Product.wxs.
+    -->
+    <UI>
+      <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="TargetsDlg" Order="10" Condition="LicenseAccepted = &quot;1&quot;" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="TargetsDlg" Order="10" Condition="NOT Installed" />
+
+      <Dialog Id="TargetsDlg" X="50" Y="50" Width="370" Height="270" Title="[ProductName] Setup">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Text="WixUI_Bmp_Banner" Disabled="yes" TabSkip="no" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="373" Height="0" Disabled="yes" TabSkip="yes" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="373" Height="0" Disabled="yes" TabSkip="yes" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="250" Height="15" Text="{\WixUI_Font_Title}Choose Install Locations" Transparent="yes" NoPrefix="yes" TabSkip="yes" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="15" Text="Select which DCS Saved Games folders to install DCS2Target into." Transparent="yes" NoPrefix="yes" TabSkip="yes" />
+
+        <Control Id="StableCheckBox" Type="CheckBox" X="20" Y="60" Width="330" Height="18" Property="INSTALLSTABLE" CheckBoxValue="1" Text="&amp;Stable   -   [SAVEDGAMESFOLDER]DCS" TabSkip="no" />
+        <Control Id="StableFoundText" Type="Text" X="38" Y="78" Width="300" Height="10" Text="(detected)" Hidden="yes" ShowCondition="STABLE_FOUND" TabSkip="yes" />
+        <Control Id="StableNotFoundText" Type="Text" X="38" Y="78" Width="300" Height="10" Text="(not detected here yet - check the box anyway if you know this is right)" Hidden="yes" ShowCondition="NOT STABLE_FOUND" TabSkip="yes" />
+
+        <Control Id="OpenBetaCheckBox" Type="CheckBox" X="20" Y="100" Width="330" Height="18" Property="INSTALLOPENBETA" CheckBoxValue="1" Text="&amp;Open Beta   -   [SAVEDGAMESFOLDER]DCS.openbeta" TabSkip="no" />
+        <Control Id="OpenBetaFoundText" Type="Text" X="38" Y="118" Width="300" Height="10" Text="(detected)" Hidden="yes" ShowCondition="OPENBETA_FOUND" TabSkip="yes" />
+        <Control Id="OpenBetaNotFoundText" Type="Text" X="38" Y="118" Width="300" Height="10" Text="(not detected here yet - check the box anyway if you know this is right)" Hidden="yes" ShowCondition="NOT OPENBETA_FOUND" TabSkip="yes" />
+
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" TabSkip="no">
+          <Publish Event="NewDialog" Value="LicenseAgreementDlg" />
+        </Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Text="&amp;Next" Default="yes" TabSkip="no">
+          <Publish Event="SpawnDialog" Value="NoTargetsDlg" Order="1" Condition="NOT ((INSTALLSTABLE = &quot;1&quot;) OR (INSTALLOPENBETA = &quot;1&quot;))" />
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="2" Condition="(INSTALLSTABLE = &quot;1&quot;) OR (INSTALLOPENBETA = &quot;1&quot;)" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Text="Cancel" Cancel="yes" TabSkip="no">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+      </Dialog>
+
+      <Dialog Id="NoTargetsDlg" X="50" Y="50" Width="260" Height="85" Title="[ProductName] Setup">
+        <Control Id="OK" Type="PushButton" X="102" Y="57" Width="56" Height="17" Text="OK" Default="yes" Cancel="yes" TabSkip="no">
+          <Publish Event="EndDialog" Value="Return" />
+        </Control>
+        <Control Id="Text" Type="Text" X="48" Y="15" Width="194" Height="30" Text="Select at least one destination." TabSkip="yes" />
+        <Control Id="Icon" Type="Icon" X="15" Y="15" Width="24" Height="24" Text="WixUI_Ico_Exclam" Disabled="yes" FixedSize="yes" IconSize="32" TabSkip="yes" />
+      </Dialog>
+    </UI>
+  </Package>
+</Wix>

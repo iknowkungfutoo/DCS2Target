@@ -61,7 +61,7 @@
 --
 --
 -- Author: slughead
--- Last edit: 21/07/2026
+-- Last edit: 24/07/2026
 --
 -- Version 2.0.0   - Switched the update ('u') packet from a fixed-position
 --                   format to the tag-value protocol documented in
@@ -70,6 +70,13 @@
 --                   length, instead of every field at a fixed character
 --                   offset every frame. Breaking change - requires
 --                   TMHotasLEDSync built against the same protocol version.
+--                   Added a once-per-second 'h' heartbeat packet so
+--                   TMHotasLEDSync can tell "nothing changed" apart from
+--                   "dcs2target is gone" and go dark on its own after an
+--                   ungraceful disconnect or an exporter switch.
+--                   Replaced the manual dcs2target.zip extract with an MSI
+--                   installer (installer/Product.wxs) as the only supported
+--                   distribution method.
 -- Version 1.0.14  - Added export of F/A-18C master caution, wing fold,
 --                   launch bar and arresting hook status for the Viper
 --                   TQS/BBox user-programmable LEDs (LED_USER_RIGHT_1..4).
@@ -108,12 +115,21 @@
 local tm_target_utils
 local generic_aircraft_utils
 
+-- Heartbeat interval (seconds) - see WIRE_PROTOCOL.md's "Heartbeat /
+-- connection-loss detection" section. Timed off os.clock() (wall/CPU
+-- time), not DCS.getModelTime() (used for dcs2target.lastUpdateTime
+-- below), since model time freezes while the sim is paused and a frozen
+-- heartbeat clock would never fire, letting TMHotasLEDSync's watchdog
+-- trip during an ordinary pause.
+local HEARTBEAT_INTERVAL = 1.0
+
 local dcs2target = {}
 
     dcs2target.VERSION_NUMBER = "2.0.0"
     dcs2target.VERSION        = "DCS2TARGET v"..dcs2target.VERSION_NUMBER
 
-    dcs2target.lastUpdateTime = DCS.getModelTime()
+    dcs2target.lastUpdateTime    = DCS.getModelTime()
+    dcs2target.lastHeartbeatTime = os.clock()
 
     dcs2target.aircraft               = nil
     dcs2target.previous_aircraft_name = nil
@@ -193,6 +209,29 @@ function dcs2target.onSimulationStop()
 end
 
 function dcs2target.onSimulationFrame()
+    -- Heartbeat - independent of the sim-time throttle below and of
+    -- whether an aircraft is loaded, so it keeps proving "I'm still here"
+    -- during a paused mission or while sitting in the mission-loading
+    -- screen, not just mid-flight. See WIRE_PROTOCOL.md.
+    if target_socket then
+        local now_wall = os.clock()
+        if now_wall - dcs2target.lastHeartbeatTime >= HEARTBEAT_INTERVAL then
+            dcs2target.lastHeartbeatTime = now_wall
+            send_all( tm_target_utils.pack_data(tm_target_utils.HEARTBEAT) )
+
+            -- Temporary diagnostic logging (2026-07-23) - reproduced once
+            -- (heartbeats stopped while the DCS pause/exit menu was open,
+            -- before pressing exit) but not since, and the "stale deployed
+            -- file" theory was never actually verified (the old file was
+            -- overwritten, not diffed) - root cause still unknown. Left in
+            -- place across test runs until it either reproduces again with
+            -- this logging active, or there's enough negative evidence to
+            -- draw a real conclusion. Don't remove this on the next "looks
+            -- fine" retest - see project_heartbeat_watchdog memory.
+            log.write('dcs2target', log.INFO, 'heartbeat sent, os.clock()=' .. tostring(now_wall))
+        end
+    end
+
     local now = DCS.getModelTime()
     if (now >= dcs2target.lastUpdateTime and now < dcs2target.lastUpdateTime + 0.1) then
         return

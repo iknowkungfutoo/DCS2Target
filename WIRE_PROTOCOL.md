@@ -58,6 +58,20 @@ version_string := remaining bytes - that sender's own bare version number
 
 **Example:** dcs2target v2.0.0 connecting sends `vD2.0.0`; `TMHotasLEDSync` prints `Connected to DCS2Target v2.0.0 (TMHotasLEDSync v2.0.0)`.
 
+## Heartbeat / connection-loss detection
+
+Because the `'u'` update packet is delta-only (see above), silence alone is ambiguous - "nothing changed" and "the sender is gone" look identical to a receiver that only watches for `'u'` packets. The heartbeat closes that gap:
+
+```
+heartbeat_packet := 'h'
+```
+
+A bare single character, no payload. `dcs2target.lua`'s `onSimulationFrame` sends one roughly every second (`HEARTBEAT_INTERVAL` = 1.0s), independent of whether a `'u'` delta also fires that frame - it's sent purely to prove "I'm still here", any time the socket is connected, whether or not an aircraft is currently loaded.
+
+`TMHotasLEDSync` treats receipt of **any** packet - `'q'`, `'r'`, `'v'`, `'m'`, `'u'`, or `'h'` - as proof of life and resets an inactivity counter; if none arrive for about 5 seconds it goes dark and forgets the current aircraft. This covers both an ungraceful crash of DCS/this script (no time to send `'q'`) and a user switching from this exporter to BMS2Target (or back) without restarting `TMHotasLEDSync`.
+
+The watchdog only arms after the first packet `TMHotasLEDSync` has seen since it started - sitting idle waiting for a sim to launch is not a lost connection (there was never one to lose), so no "connection lost" message or `lights_out()` fires until at least one sender has connected at least once. It's also disarmed by a `'q'` (graceful sim exit) and re-arms automatically on the next packet - the silence between one sim session ending and the next one starting is expected, not a fault, the same as the pre-first-connection case.
+
 ## Tag scope: per-aircraft, not global
 
 `TMHotasLEDSync`'s `TCPCallback` dispatches by aircraft before any field decoding happens. Because of that, **a tag only needs to be unique within one aircraft's own table below** - it's safe (and expected) for the same letter to mean different things for different aircraft.

@@ -7,7 +7,7 @@
 -- Utility functions for formating Thrustmaster Target TCP packets.
 --
 -- Author: slughead
--- Date: 21/07/2026
+-- Date: 24/07/2026
 --
 ------------------------------------------------------------------------------
 
@@ -15,11 +15,12 @@ local P = {}
 tm_target_utils = P
 
     -- command types
-    P.QUIT    = "q" -- simulation exit
-    P.RESET   = "r" -- reset led states, ejct, die, etc
-    P.MODULE  = "m" -- module / acircraft name
-    P.UPDATE  = "u" -- update lamp states
-    P.VERSION = "v" -- version
+    P.QUIT      = "q" -- simulation exit
+    P.RESET     = "r" -- reset led states, ejct, die, etc
+    P.MODULE    = "m" -- module / acircraft name
+    P.UPDATE    = "u" -- update lamp states
+    P.VERSION   = "v" -- version
+    P.HEARTBEAT = "h" -- proof of life, sent on a timer - see WIRE_PROTOCOL.md
 
 local function bitand(a, b)
 
