@@ -60,7 +60,7 @@
            Compressed="yes"
            Scope="perUser">
 
-    <MajorUpgrade DowngradeErrorMessage="A newer version of DCS2Target is already installed." />
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of DCS2Target is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <!--
